@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "unasyncd"
-version = "0.1.0"
+version = "0.1.1"
 description = ""
 authors = ["Janek Nouvertné <j.a.nouvertne@posteo.de>"]
 license = "MIT"
