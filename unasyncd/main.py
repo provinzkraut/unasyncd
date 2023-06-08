@@ -201,7 +201,6 @@ class Env:
         - ``source_file`` stats have not changed
         - ``source_file`` is AST-equivalent to its previous version
         - ``target_file`` does exist
-        - ``target_file`` is AST-equivalent to its previous version
 
         If the ``force_regen`` option is used, always return ``True``.
         """
@@ -212,9 +211,6 @@ class Env:
             return True
 
         if not await target.exists():
-            return True
-
-        if not await target.meta_equal(await self.get_meta(target)):
             return True
 
         return False
