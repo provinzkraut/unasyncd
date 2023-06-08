@@ -1,0 +1,9 @@
+- id: unasyncd
+  name: unasyncd
+  entry: unasyncd
+  language: python
+  types:
+    - file
+    - python
+  require_serial: true
+  pass_filenames: false
