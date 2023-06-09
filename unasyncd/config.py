@@ -17,6 +17,7 @@ class Config(msgspec.Struct):
     files: dict[str, str]
     force_regen: bool
     check_only: bool
+    infer_type_checking_imports: bool
 
     def key(self) -> str:
         return hashlib.sha1(msgspec.json.encode(self)).hexdigest()
@@ -72,4 +73,5 @@ def load_config(path: Path | None, **defaults: Any) -> Config:
         no_cache=raw_config.get("no_cache", False),
         check_only=raw_config.get("check_only", False),
         force_regen=raw_config.get("force_regen", False),
+        infer_type_checking_imports=raw_config.get("infer_type_checking_imports", True),
     )

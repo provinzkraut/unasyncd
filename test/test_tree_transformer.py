@@ -1406,3 +1406,35 @@ def test_honour_type_checking_import_multiple_names_from_same_module() -> None:
     """
     result = transformer(dedent(source))
     assert result == dedent(expected)
+
+
+def test_disable_infer_type_checking_imports() -> None:
+    transformer = TreeTransformer(
+        extra_name_replacements={
+            "module_a.AsyncThing": "module_b.SyncThing",
+        },
+        infer_type_checking_imports=False,
+    )
+
+    source = """
+    from typing import TYPE_CHECKING
+
+    if TYPE_CHECKING:
+        from module_a import AsyncThing
+
+    def bar() -> AsyncThing:
+        pass
+    """
+
+    expected = """
+    from typing import TYPE_CHECKING
+    from module_b import SyncThing
+
+    if TYPE_CHECKING:
+        from module_a import AsyncThing
+
+    def bar() -> SyncThing:
+        pass
+    """
+
+    assert transformer(dedent(source)) == dedent(expected)

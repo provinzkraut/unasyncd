@@ -115,6 +115,7 @@ def test_set_config_file(
     assert mock_load_config.call_args_list[0].kwargs["path"] == config_path
 
 
+@pytest.mark.parametrize("no_infer_type_checking_import", [True, False])
 @pytest.mark.parametrize("transform_docstrings", [True, False])
 @pytest.mark.parametrize("add_editors_note", [True, False])
 @pytest.mark.parametrize("check_only", [True, False])
@@ -130,6 +131,7 @@ def test_config_options(
     target_file: Path,
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
+    no_infer_type_checking_import: bool,
 ):
     monkeypatch.chdir(tmp_path)
     arguments = [f"{source_file}:{target_file}"]
@@ -146,6 +148,9 @@ def test_config_options(
     if force_regen:
         arguments.append("--force")
 
+    if no_infer_type_checking_import:
+        arguments.append("--no-infer-type-checking-imports")
+
     result = runner.invoke(main, arguments)
 
     assert not result.exception
@@ -156,6 +161,7 @@ def test_config_options(
     assert config.add_editors_note is add_editors_note
     assert config.check_only is check_only
     assert config.force_regen is force_regen
+    assert config.infer_type_checking_imports is not no_infer_type_checking_import
 
 
 def test_pass_files(

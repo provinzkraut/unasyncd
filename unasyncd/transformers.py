@@ -152,6 +152,7 @@ class TreeTransformer:
         exclude: Iterable[str] | None = None,
         transform_docstrings: bool = True,
         extra_name_replacements: dict[str, str] | None = None,
+        infer_type_checking_imports: bool = True,
     ) -> None:
         self.exclude = exclude
         self.transform_docstrings = transform_docstrings
@@ -159,6 +160,7 @@ class TreeTransformer:
             **NAME_REPLACEMENTS,
             **(extra_name_replacements or {}),
         }
+        self.infer_type_checking_imports = infer_type_checking_imports
 
     def __call__(self, source: str) -> str:
         if not source:
@@ -170,6 +172,7 @@ class TreeTransformer:
                 exclude=self.exclude,
                 name_replacements=self.name_replacements,
                 transform_docstrings=self.transform_docstrings,
+                infer_type_checking_imports=self.infer_type_checking_imports,
             )
         )
         output = result.code
@@ -371,6 +374,7 @@ class _AsyncTransformer(_ReplaceNamesMixin, cst.CSTTransformer):
         exclude: Iterable[str] | None = None,
         name_replacements: dict[str, str],
         transform_docstrings: bool,
+        infer_type_checking_imports: bool = True,
     ):
         """
 
@@ -381,6 +385,7 @@ class _AsyncTransformer(_ReplaceNamesMixin, cst.CSTTransformer):
         """
         super().__init__()
         self._should_transform_docstrings = transform_docstrings
+        self._should_infer_type_checking_imports = infer_type_checking_imports
         self._name_replacements = name_replacements
         self._attribute_replacements = {
             name: replacement
@@ -906,6 +911,14 @@ class _AsyncTransformer(_ReplaceNamesMixin, cst.CSTTransformer):
             type_checking_imports=add_to_typechecking_import,
         )
 
+        imports_to_add: Iterable[AnyImport] = itertools.chain(
+            new_from_imports, new_module_imports
+        )
+
+        if not self._should_infer_type_checking_imports:
+            imports_to_add = itertools.chain(imports_to_add, add_to_typechecking_import)
+            add_to_typechecking_import = set()
+
         updated_node = node.visit(
             _ImportTransformer(
                 imports_to_update=from_imports_to_update,
@@ -918,10 +931,7 @@ class _AsyncTransformer(_ReplaceNamesMixin, cst.CSTTransformer):
 
         new_module_body = [
             *updated_node.body[:import_offset],
-            *[
-                cst.SimpleStatementLine([new_import])
-                for new_import in itertools.chain(new_from_imports, new_module_imports)
-            ],
+            *[cst.SimpleStatementLine([new_import]) for new_import in imports_to_add],
             *updated_node.body[import_offset:],
         ]
 

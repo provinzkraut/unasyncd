@@ -29,6 +29,7 @@ def test_default_config(config_from_file):
     assert config.files == {}
     assert config.exclude == {}
     assert config.extra_replacements == {}
+    assert config.infer_type_checking_imports is True
 
 
 def test_config_override(config_from_file, tmp_path):
@@ -41,6 +42,7 @@ def test_config_override(config_from_file, tmp_path):
         check_only=True,
         force_regen=True,
         files={"foo.py": "bar.py"},
+        infer_type_checking_imports=False,
     )
 
     assert config.add_editors_note is True
@@ -49,6 +51,7 @@ def test_config_override(config_from_file, tmp_path):
     assert config.check_only is True
     assert config.force_regen is True
     assert config.files == {"foo.py": "bar.py"}
+    assert config.infer_type_checking_imports is False
 
 
 def test_file_directories(config_from_file, tmp_path):

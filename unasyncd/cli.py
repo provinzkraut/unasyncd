@@ -56,6 +56,12 @@ async def _run(*, config: Config, check_only: bool, verbose: bool) -> bool:
     help="Transform module, class, method and function docstrings",
 )
 @click.option(
+    "--no-infer-type-checking-imports",
+    is_flag=True,
+    default=None,
+    help="Don't infer if new imports should go in an if TYPE_CHECKING block",
+)
+@click.option(
     "--add-editors-note",
     is_flag=True,
     default=None,
@@ -86,6 +92,7 @@ def main(
     files: tuple[str, ...],
     no_cache: bool | None,
     transform_docstrings: bool | None,
+    no_infer_type_checking_imports: bool | None,
     check_only: bool,
     add_editors_note: bool | None,
     config_file: Path | None,
@@ -113,6 +120,9 @@ def main(
         files=dict(f.split(":", 1) for f in files) if files else None,
         check_only=check_only,
         force_regen=force_regen,
+        infer_type_checking_imports=False
+        if no_infer_type_checking_imports is not None
+        else None,
     )
 
     if not config.files:
