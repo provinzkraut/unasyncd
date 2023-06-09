@@ -1,14 +1,9 @@
 import asyncio
 import time
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 import rich
-
-if TYPE_CHECKING:
-    import click
-else:
-    import rich_click as click
+import rich_click as click
 
 from .config import Config, load_config
 from .main import unasync_files
