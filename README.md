@@ -41,9 +41,11 @@ Unasyncd features:
 
 ## Table of contents
 
+<!-- TOC -->
 * [Unasync](#unasync)
   * [Why?](#why)
   * [Why unasyncd?](#why-unasyncd)
+  * [Table of contents](#table-of-contents)
   * [What can be transformed?](#what-can-be-transformed)
     * [Asynchronous functions](#asynchronous-functions)
     * [`await`](#await)
@@ -61,7 +63,8 @@ Unasyncd features:
     * [CLI](#cli)
     * [As a pre-commit hook](#as-a-pre-commit-hook)
     * [Configuration](#configuration)
-      * [Options](#options)
+      * [File](#file)
+      * [CLI options](#cli-options)
       * [Exclusions](#exclusions)
       * [Extending name replacements](#extending-name-replacements)
     * [Handling of imports](#handling-of-imports)
@@ -375,21 +378,20 @@ Unasyncd is available as a pre-commit hook:
 Unasyncd can be configured via a `pyproject.toml` file, a dedicated `.unasyncd.toml`
 file or the command line interface.
 
-#### Options
+#### File
 
-| config file key             | CLI                             | default | description                                                                        |
-|-----------------------------|---------------------------------|---------|------------------------------------------------------------------------------------|
-| `files`                     |                                 | -       | A table mapping source file names / directories to target file names / directories |
-| `exclude`                   | N/A                             | -       | An array of names to exclude from transformation                                   |
-| `per_file_exclude`          | N/A                             | -       | A table mapping files names to an array of names to exclude from transformation    |
-| `add_replacements`          | N/A                             | -       | A table of additional name replacements                                            |
-| `per_file_add_replacements` | N/A                             | -       | A table mapping file names to tables of additional replacements                    |
-| `transform_docstrings`      | `-d` / `--transform-docstrings` | false   | Enable transformation of docstrings                                                |
-| `add_editors_note`          | `--add-editors-note`            | false   | Add a note on top of the generated files                                           |
-| `remove_unuse_imports`      | `--remove-unused-imports`       | false   | Remove imports that have become unused after the transformation                    |
-| `no_cache`                  | `--no-cache`                    | false   | Disable caching                                                                    |
-| `force_regen`               | `--force-regen`                 | false   | Always regenerate files, regardless if their content has changed                   |
-| N/A                         | `-c` / `--config``              | -       | Specify an alternative configuration file                                          |
+| config file key               | type  | default | description                                                                        |
+|-------------------------------|-------|---------|------------------------------------------------------------------------------------|
+| `files`                       | table | -       | A table mapping source file names / directories to target file names / directories |
+| `exclude`                     | array | -       | An array of names to exclude from transformation                                   |
+| `per_file_exclude`            | table | -       | A table mapping files names to an array of names to exclude from transformation    |
+| `add_replacements`            | table | -       | A table of additional name replacements                                            |
+| `per_file_add_replacements`   | table | -       | A table mapping file names to tables of additional replacements                    |
+| `transform_docstrings`        | bool  | false   | Enable transformation of docstrings                                                |
+| `add_editors_note`            | bool  | false   | Add a note on top of the generated files                                           |
+| `infer_type_checking_imports` | bool  | true    | Infer if new imports should be added to an 'if TYPE_CHECKING' block                |
+| `cache`                       | bool  | true    | Cache transformation results                                                       |
+| `force_regen`                 | bool  | false   | Always regenerate files, regardless if their content has changed                   |
 
 **Example**
 
@@ -406,6 +408,35 @@ no_cache = false
 no_cache = false
 force_regen = false
 ```
+
+#### CLI options
+
+*Feature flags corresponding to configuration values*
+
+| option                             | description                                                         |
+|------------------------------------|---------------------------------------------------------------------|
+| `--cache`                          | Cache transformation results                                        |
+| `--no-cache `                      | Don't cache transformation results                                  |
+| `--transform-docstrings`           | Enable transformation of docstrings                                 |
+| `--no-transform-docstrings`        | Inverse of `--transform-docstrings`                                 |
+| `--infer-type-checking-imports`    | Infer if new imports should be added to an 'if TYPE_CHECKING' block |
+| `--no-infer-type-checking-imports` | Inverse of `infer-type-checking-imports`                            |
+| `--add-editors-note`               | Add a note on top of each generated file                            |
+| `--no-add-editors-note`            | Inverse of `--add-editors-note`                                     |
+| `--force`                          | Always regenerate files, regardless if their content has changed    |
+| `--no-force`                       | Inverse of `--force`                                                |
+| `--check`                          | Don't write changes back to files                                   |
+| `--write`                          | Inverse of `--check`                                                |
+
+
+*Additional CLI options*
+
+| option      | description                          |
+|-------------|--------------------------------------|
+| `--config`  | Alternative configuration file       |
+| `--verbose` | Increase verbosity of console output |
+| `--quiet`   | Suppress all console output          |
+
 
 #### Exclusions
 

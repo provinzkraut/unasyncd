@@ -14,6 +14,7 @@ rich = "^13.4.1"
 anyio = "^3.7.0"
 msgspec = "^0.15.1"
 tomli-w = "^1.0.0"
+rich-click = "^1.6.1"
 
 
 [tool.poetry.group.dev.dependencies]

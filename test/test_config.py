@@ -22,14 +22,14 @@ def test_default_config(config_from_file):
     config = config_from_file()
 
     assert config.add_editors_note is False
-    assert config.remove_unused_imports is False
     assert config.transform_docstrings is False
-    assert config.no_cache is False
+    assert config.cache is True
     assert config.check_only is False
     assert config.force_regen is False
     assert config.files == {}
     assert config.exclude == {}
     assert config.extra_replacements == {}
+    assert config.infer_type_checking_imports is True
 
 
 def test_config_override(config_from_file, tmp_path):
@@ -37,21 +37,21 @@ def test_config_override(config_from_file, tmp_path):
 
     config = config_from_file(
         add_editors_note=True,
-        remove_unused_imports=True,
         transform_docstrings=True,
-        no_cache=True,
+        cache=False,
         check_only=True,
         force_regen=True,
         files={"foo.py": "bar.py"},
+        infer_type_checking_imports=False,
     )
 
     assert config.add_editors_note is True
-    assert config.remove_unused_imports is True
     assert config.transform_docstrings is True
-    assert config.no_cache is True
+    assert config.cache is False
     assert config.check_only is True
     assert config.force_regen is True
     assert config.files == {"foo.py": "bar.py"}
+    assert config.infer_type_checking_imports is False
 
 
 def test_file_directories(config_from_file, tmp_path):

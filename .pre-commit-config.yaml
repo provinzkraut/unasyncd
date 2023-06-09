@@ -31,3 +31,4 @@ repos:
           - click
           - msgspec
           - anyio
+          - rich-click

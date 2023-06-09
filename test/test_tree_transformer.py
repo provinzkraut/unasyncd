@@ -6,14 +6,9 @@ import pytest
 from unasyncd.transformers import TreeTransformer
 
 
-@pytest.fixture(params=[True, False])
-def remove_unused_imports(request) -> bool:
-    return request.param
-
-
 @pytest.fixture
 def transformer() -> TreeTransformer:
-    return TreeTransformer(remove_unused_imports=True)
+    return TreeTransformer()
 
 
 def test_unwrap_name_or_attribute() -> None:
@@ -215,7 +210,7 @@ def test_asynccontextmanager(transformer: TreeTransformer) -> None:
     """
 
     expected = """
-    from contextlib import contextmanager
+    from contextlib import asynccontextmanager, contextmanager
 
     @contextmanager
     def foo():
@@ -235,7 +230,7 @@ def test_asynccontextmanager_alias_import(transformer: TreeTransformer) -> None:
     """
 
     expected = """
-    from contextlib import contextmanager
+    from contextlib import asynccontextmanager as something_else, contextmanager
 
     @contextmanager
     def foo():
@@ -288,7 +283,7 @@ def test_async_generator(transformer: TreeTransformer) -> None:
     """
 
     expected = """
-    from typing import Generator
+    from typing import AsyncGenerator, Generator
     x: Generator
     """
 
@@ -302,7 +297,7 @@ def test_async_generator_annotation(transformer: TreeTransformer) -> None:
     """
 
     expected = """
-    from typing import Generator
+    from typing import AsyncGenerator, Generator
     x: Generator[str, int, None]
     """
 
@@ -334,7 +329,7 @@ def test_async_generator_class(transformer: TreeTransformer) -> None:
     """
 
     expected = """
-    from typing import Generator
+    from typing import AsyncGenerator, Generator
 
     class Foo(Generator[str, int, None]):
         pass
@@ -370,7 +365,7 @@ def test_async_iterable_annotation(transformer: TreeTransformer) -> None:
     """
 
     expected = """
-    from typing import Iterable
+    from typing import AsyncIterable, Iterable
     x: Iterable[str, int]
     """
 
@@ -402,7 +397,7 @@ def test_async_iterable_class(transformer: TreeTransformer) -> None:
     """
 
     expected = """
-    from typing import Iterable
+    from typing import AsyncIterable, Iterable
 
     class Foo(Iterable[str, int]):
         pass
@@ -454,7 +449,7 @@ def test_async_iterator_annotation(transformer: TreeTransformer) -> None:
     """
 
     expected = """
-    from typing import Iterator
+    from typing import AsyncIterator, Iterator
     x: Iterator[str, int]
     """
 
@@ -486,7 +481,7 @@ def test_async_iterator_class(transformer: TreeTransformer) -> None:
     """
 
     expected = """
-    from typing import Iterator
+    from typing import AsyncIterator, Iterator
 
     class Foo(Iterator[str, int]):
         pass
@@ -527,7 +522,7 @@ def test_async_exit_stack(transformer: TreeTransformer) -> None:
     """
 
     expected = """
-    from contextlib import ExitStack
+    from contextlib import AsyncExitStack, ExitStack
 
     with ExitStack() as some_stack_name:
         some_stack_name.enter_context(foo)
@@ -580,6 +575,7 @@ def test_asyncio_task_group(transformer: TreeTransformer) -> None:
     """
 
     expected = """
+    from asyncio import TaskGroup
     from concurrent.futures import ThreadPoolExecutor
 
     with ThreadPoolExecutor() as some_name:
@@ -607,6 +603,7 @@ def test_asyncio_task_alter_name(transformer: TreeTransformer) -> None:
     """
 
     expected = """
+    from asyncio import TaskGroup
     from concurrent.futures import ThreadPoolExecutor
 
     with ThreadPoolExecutor() as executor:
@@ -628,6 +625,7 @@ def test_asyncio_task_group_alias_import(transformer: TreeTransformer) -> None:
     """
 
     expected = """
+    from asyncio import TaskGroup as Foobar
     from concurrent.futures import ThreadPoolExecutor
 
     with ThreadPoolExecutor() as executor:
@@ -646,6 +644,7 @@ def test_asyncio_task_group_module_import(transformer: TreeTransformer) -> None:
     """
 
     expected = """
+    import asyncio
     import concurrent.futures
 
     with concurrent.futures.ThreadPoolExecutor() as executor:
@@ -727,6 +726,7 @@ def test_anyio_task_group(transformer: TreeTransformer) -> None:
     """
 
     expected = """
+    from anyio import create_task_group
     from concurrent.futures import ThreadPoolExecutor
 
     with ThreadPoolExecutor() as some_name:
@@ -755,6 +755,7 @@ def test_anyio_task_alter_name(transformer: TreeTransformer) -> None:
     """
 
     expected = """
+    from anyio import create_task_group
     from concurrent.futures import ThreadPoolExecutor
 
     with ThreadPoolExecutor() as executor:
@@ -776,6 +777,7 @@ def test_anyio_task_group_alias_import(transformer: TreeTransformer) -> None:
     """
 
     expected = """
+    from anyio import create_task_group as something_else
     from concurrent.futures import ThreadPoolExecutor
 
     with ThreadPoolExecutor() as executor:
@@ -794,6 +796,7 @@ def test_anyio_task_group_module_import(transformer: TreeTransformer) -> None:
     """
 
     expected = """
+    import anyio
     import concurrent.futures
 
     with concurrent.futures.ThreadPoolExecutor() as executor:
@@ -837,6 +840,7 @@ def test_asyncio_sleep_module_import(transformer: TreeTransformer) -> None:
     """
 
     expected = """
+    import asyncio
     import time
     time.sleep(1)
     """
@@ -854,6 +858,7 @@ def test_asyncio_sleep_0(transformer: TreeTransformer):
     """
 
     expected = """
+    import asyncio
 
     def foo():
         return True
@@ -868,7 +873,6 @@ def test_anyio_sleep(transformer: TreeTransformer) -> None:
     await sleep(1)
     """
 
-    # these cases are hard and expensive to track, so we just don't
     expected = """
     from anyio import sleep
     from time import sleep
@@ -885,6 +889,7 @@ def test_anyio_sleep_module_import(transformer: TreeTransformer) -> None:
     """
 
     expected = """
+    import anyio
     import time
     time.sleep(1)
     """
@@ -902,6 +907,7 @@ def test_anyio_sleep_0(transformer: TreeTransformer):
     """
 
     expected = """
+    import anyio
 
     def foo():
         return True
@@ -924,8 +930,8 @@ def test_relative_import(transformer: TreeTransformer) -> None:
     assert transformer(dedent(source)) == dedent(expected)
 
 
-def test_add_new_import_with_module_docstring(remove_unused_imports: bool) -> None:
-    transformer = TreeTransformer(remove_unused_imports=remove_unused_imports)
+def test_add_new_import_with_module_docstring() -> None:
+    transformer = TreeTransformer()
 
     source = '''
     """This is a module level docstring"""
@@ -935,31 +941,20 @@ def test_add_new_import_with_module_docstring(remove_unused_imports: bool) -> No
         await asyncio.sleep(1)
     '''
 
-    if remove_unused_imports:
-        expected = '''
-        """This is a module level docstring"""
-        import time
+    expected = '''
+    """This is a module level docstring"""
+    import asyncio
+    import time
 
-        def foo():
-            time.sleep(1)
-        '''
-    else:
-        expected = '''
-        """This is a module level docstring"""
-        import asyncio
-        import time
-
-        def foo():
-            time.sleep(1)
-        '''
+    def foo():
+        time.sleep(1)
+    '''
 
     assert transformer(dedent(source)) == dedent(expected)
 
 
-def test_add_new_import_with_module_docstring_multiline(
-    remove_unused_imports: bool,
-) -> None:
-    transformer = TreeTransformer(remove_unused_imports=remove_unused_imports)
+def test_add_new_import_with_module_docstring_multiline() -> None:
+    transformer = TreeTransformer()
 
     source = '''
     """This is a module level docstring.
@@ -971,35 +966,23 @@ def test_add_new_import_with_module_docstring_multiline(
         await asyncio.sleep(1)
     '''
 
-    if remove_unused_imports:
-        expected = '''
-        """This is a module level docstring.
-        It has multiple lines
-        """
-        import time
+    expected = '''
+    """This is a module level docstring.
+    It has multiple lines
+    """
+    import asyncio
+    import time
 
-        def foo():
-            time.sleep(1)
-        '''
-    else:
-        expected = '''
-        """This is a module level docstring.
-        It has multiple lines
-        """
-        import asyncio
-        import time
-
-        def foo():
-            time.sleep(1)
-        '''
+    def foo():
+        time.sleep(1)
+    '''
 
     assert transformer(dedent(source)) == dedent(expected)
 
 
-def test_type_checking_import(remove_unused_imports: bool) -> None:
+def test_type_checking_import() -> None:
     transformer = TreeTransformer(
         extra_name_replacements={"foo.AsyncThing": "bar.SyncThing"},
-        remove_unused_imports=remove_unused_imports,
     )
 
     source = """
@@ -1012,36 +995,23 @@ def test_type_checking_import(remove_unused_imports: bool) -> None:
         ...
     """
 
-    if remove_unused_imports:
-        expected = """
-        from typing import TYPE_CHECKING
+    expected = """
+    from typing import TYPE_CHECKING
+
+    if TYPE_CHECKING:
+        from foo import AsyncThing
         from bar import SyncThing
 
-        if TYPE_CHECKING:
-            pass
-
-        def func() -> SyncThing:
-            ...
-        """
-    else:
-        expected = """
-        from typing import TYPE_CHECKING
-        from bar import SyncThing
-
-        if TYPE_CHECKING:
-            from foo import AsyncThing
-
-        def func() -> SyncThing:
-            ...
-        """
+    def func() -> SyncThing:
+        ...
+    """
 
     assert transformer(dedent(source)) == dedent(expected)
 
 
-def test_reuse_existing_import(remove_unused_imports: bool) -> None:
+def test_reuse_existing_import() -> None:
     transformer = TreeTransformer(
         extra_name_replacements={"foo.AsyncThing": "bar.SyncThing"},
-        remove_unused_imports=remove_unused_imports,
     )
 
     source = """
@@ -1052,29 +1022,20 @@ def test_reuse_existing_import(remove_unused_imports: bool) -> None:
         ...
     """
 
-    if remove_unused_imports:
-        expected = """
-        from bar import SyncThing
+    expected = """
+    from foo import AsyncThing
+    from bar import SyncThing
 
-        def func() -> SyncThing:
-            ...
-        """
-    else:
-        expected = """
-        from foo import AsyncThing
-        from bar import SyncThing
-
-        def func() -> SyncThing:
-            ...
-        """
+    def func() -> SyncThing:
+        ...
+    """
 
     assert transformer(dedent(source)) == dedent(expected)
 
 
-def test_add_to_existing_from_import(remove_unused_imports: bool) -> None:
+def test_add_to_existing_from_import() -> None:
     transformer = TreeTransformer(
         extra_name_replacements={"foo.async_func": "foo.sync_func"},
-        remove_unused_imports=remove_unused_imports,
     )
     source = """
     from foo import bar, async_func
@@ -1083,27 +1044,18 @@ def test_add_to_existing_from_import(remove_unused_imports: bool) -> None:
         await async_func()
     """
 
-    if remove_unused_imports:
-        expected = """
-        from foo import bar, sync_func
+    expected = """
+    from foo import bar, async_func, sync_func
 
-        def call_func():
-            sync_func()
-        """
-
-    else:
-        expected = """
-        from foo import bar, async_func, sync_func
-
-        def call_func():
-            sync_func()
-        """
+    def call_func():
+        sync_func()
+    """
 
     assert transformer(dedent(source)) == dedent(expected)
 
 
 def test_unused_name_not_replaced() -> None:
-    transformer = TreeTransformer(remove_unused_imports=True)
+    transformer = TreeTransformer()
     source = """
     from typing import AsyncIterable, Union
 
@@ -1111,7 +1063,7 @@ def test_unused_name_not_replaced() -> None:
     """
 
     expected = """
-    from typing import Union, Iterable
+    from typing import AsyncIterable, Union, Iterable
 
     x: Iterable
     """
@@ -1336,9 +1288,7 @@ def test_wrapped_await_expression_preserve_inline_comment(
     assert transformer(dedent(source)) == dedent(expected)
 
 
-def test_function_preserve_inline_comment(
-    transformer: TreeTransformer,
-) -> None:
+def test_function_preserve_inline_comment(transformer: TreeTransformer) -> None:
     source = """
     async def foo(  # preserve this
     ) -> None:  # and this
@@ -1348,6 +1298,142 @@ def test_function_preserve_inline_comment(
     expected = """
     def foo(  # preserve this
     ) -> None:  # and this
+        pass
+    """
+
+    assert transformer(dedent(source)) == dedent(expected)
+
+
+def test_honour_type_checking_import() -> None:
+    transformer = TreeTransformer(
+        extra_name_replacements={
+            "module_a.AsyncThing": "module_b.SyncThing",
+            "async_module.Something": "sync_module.SomethingElse",
+        },
+    )
+
+    source = """
+    from typing import TYPE_CHECKING
+
+    if TYPE_CHECKING:
+        import async_module
+        from module_a import AsyncThing
+
+    def bar(param: async_module.Something) -> AsyncThing:
+        pass
+    """
+
+    expected = """
+    from typing import TYPE_CHECKING
+
+    if TYPE_CHECKING:
+        import async_module
+        from module_a import AsyncThing
+        from module_b import SyncThing
+        import sync_module
+
+    def bar(param: sync_module.SomethingElse) -> SyncThing:
+        pass
+    """
+    assert transformer(dedent(source)) == dedent(expected)
+
+
+def test_honour_type_checking_import_submodule() -> None:
+    transformer = TreeTransformer(
+        extra_name_replacements={
+            "module_a.submodule_a.AsyncThing": "module_b.submodule_b.SyncThing",
+            "module_c.sub_c.ThingC": "module_d.sub_d.ThingD",
+        },
+    )
+
+    source = """
+    from typing import TYPE_CHECKING
+
+    if TYPE_CHECKING:
+        from module_a.submodule_a import AsyncThing
+        import module_c.sub_c
+
+    def bar(param: module_c.sub_c.ThingC) -> AsyncThing:
+        pass
+    """
+
+    expected = """
+    from typing import TYPE_CHECKING
+
+    if TYPE_CHECKING:
+        from module_a.submodule_a import AsyncThing
+        import module_c.sub_c
+        from module_b.submodule_b import SyncThing
+        import module_d.sub_d
+
+    def bar(param: module_d.sub_d.ThingD) -> SyncThing:
+        pass
+    """
+
+    assert transformer(dedent(source)) == dedent(expected)
+
+
+def test_honour_type_checking_import_multiple_names_from_same_module() -> None:
+    transformer = TreeTransformer(
+        extra_name_replacements={
+            "foo.ThingOne": "bar.ThingThree",
+            "foo.ThingTwo": "bar.ThingFour",
+        },
+    )
+
+    source = """
+    from typing import TYPE_CHECKING
+    from foo import ThingOne
+
+    if TYPE_CHECKING:
+        from foo import ThingTwo
+
+    def baz(param: ThingOne) -> ThingTwo:
+        pass
+    """
+
+    expected = """
+    from typing import TYPE_CHECKING
+    from foo import ThingOne
+    from bar import ThingThree
+
+    if TYPE_CHECKING:
+        from foo import ThingTwo
+        from bar import ThingFour
+
+    def baz(param: ThingThree) -> ThingFour:
+        pass
+    """
+    result = transformer(dedent(source))
+    assert result == dedent(expected)
+
+
+def test_disable_infer_type_checking_imports() -> None:
+    transformer = TreeTransformer(
+        extra_name_replacements={
+            "module_a.AsyncThing": "module_b.SyncThing",
+        },
+        infer_type_checking_imports=False,
+    )
+
+    source = """
+    from typing import TYPE_CHECKING
+
+    if TYPE_CHECKING:
+        from module_a import AsyncThing
+
+    def bar() -> AsyncThing:
+        pass
+    """
+
+    expected = """
+    from typing import TYPE_CHECKING
+    from module_b import SyncThing
+
+    if TYPE_CHECKING:
+        from module_a import AsyncThing
+
+    def bar() -> SyncThing:
         pass
     """
 
