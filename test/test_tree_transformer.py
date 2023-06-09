@@ -1015,10 +1015,9 @@ def test_type_checking_import(remove_unused_imports: bool) -> None:
     if remove_unused_imports:
         expected = """
         from typing import TYPE_CHECKING
-        from bar import SyncThing
 
         if TYPE_CHECKING:
-            pass
+            from bar import SyncThing
 
         def func() -> SyncThing:
             ...
@@ -1026,10 +1025,10 @@ def test_type_checking_import(remove_unused_imports: bool) -> None:
     else:
         expected = """
         from typing import TYPE_CHECKING
-        from bar import SyncThing
 
         if TYPE_CHECKING:
             from foo import AsyncThing
+            from bar import SyncThing
 
         def func() -> SyncThing:
             ...
@@ -1336,9 +1335,7 @@ def test_wrapped_await_expression_preserve_inline_comment(
     assert transformer(dedent(source)) == dedent(expected)
 
 
-def test_function_preserve_inline_comment(
-    transformer: TreeTransformer,
-) -> None:
+def test_function_preserve_inline_comment(transformer: TreeTransformer) -> None:
     source = """
     async def foo(  # preserve this
     ) -> None:  # and this
@@ -1352,3 +1349,107 @@ def test_function_preserve_inline_comment(
     """
 
     assert transformer(dedent(source)) == dedent(expected)
+
+
+def test_honour_type_checking_import() -> None:
+    transformer = TreeTransformer(
+        extra_name_replacements={
+            "module_a.AsyncThing": "module_b.SyncThing",
+            "async_module.Something": "sync_module.SomethingElse",
+        },
+    )
+
+    source = """
+    from typing import TYPE_CHECKING
+
+    if TYPE_CHECKING:
+        import async_module
+        from module_a import AsyncThing
+
+    def bar(param: async_module.Something) -> AsyncThing:
+        pass
+    """
+
+    expected = """
+    from typing import TYPE_CHECKING
+
+    if TYPE_CHECKING:
+        import async_module
+        from module_a import AsyncThing
+        from module_b import SyncThing
+        import sync_module
+
+    def bar(param: sync_module.SomethingElse) -> SyncThing:
+        pass
+    """
+    assert transformer(dedent(source)) == dedent(expected)
+
+
+def test_honour_type_checking_import_submodule() -> None:
+    transformer = TreeTransformer(
+        extra_name_replacements={
+            "module_a.submodule_a.AsyncThing": "module_b.submodule_b.SyncThing",
+            "module_c.sub_c.ThingC": "module_d.sub_d.ThingD",
+        },
+    )
+
+    source = """
+    from typing import TYPE_CHECKING
+
+    if TYPE_CHECKING:
+        from module_a.submodule_a import AsyncThing
+        import module_c.sub_c
+
+    def bar(param: module_c.sub_c.ThingC) -> AsyncThing:
+        pass
+    """
+
+    expected = """
+    from typing import TYPE_CHECKING
+
+    if TYPE_CHECKING:
+        from module_a.submodule_a import AsyncThing
+        import module_c.sub_c
+        from module_b.submodule_b import SyncThing
+        import module_d.sub_d
+
+    def bar(param: module_d.sub_d.ThingD) -> SyncThing:
+        pass
+    """
+
+    assert transformer(dedent(source)) == dedent(expected)
+
+
+def test_honour_type_checking_import_multiple_names_from_same_module() -> None:
+    transformer = TreeTransformer(
+        extra_name_replacements={
+            "foo.ThingOne": "bar.ThingThree",
+            "foo.ThingTwo": "bar.ThingFour",
+        },
+    )
+
+    source = """
+    from typing import TYPE_CHECKING
+    from foo import ThingOne
+
+    if TYPE_CHECKING:
+        from foo import ThingTwo
+
+    def baz(param: ThingOne) -> ThingTwo:
+        pass
+    """
+
+    expected = """
+    from typing import TYPE_CHECKING
+    from foo import ThingOne
+    from bar import ThingThree
+
+    if TYPE_CHECKING:
+        from foo import ThingTwo
+        from bar import ThingFour
+
+    def baz(param: ThingThree) -> ThingFour:
+        pass
+    """
+    result = transformer(dedent(source))
+    assert result == dedent(expected)

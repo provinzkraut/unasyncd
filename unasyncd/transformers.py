@@ -1,10 +1,10 @@
 from __future__ import annotations
 
+import dataclasses
 import itertools
 import re
 from collections import defaultdict
 from collections.abc import Iterable, Sequence
-from dataclasses import dataclass
 from typing import Any, TypeVar
 
 import libcst as cst
@@ -49,19 +49,18 @@ UNASYNC_REPLACEMENTS = {
 ASYNC_GEN_RE = re.compile(r"AsyncGenerator\[(.+,.+)]")
 
 
-@dataclass
+@dataclasses.dataclass
 class TransformerMeta:
-    module_imports: dict[str, AnyImport]
     needs_from_import: defaultdict[str, set[str]]
     needs_module_import: set[str]
     exclude: set[tuple[str, ...]]
     removed_names: defaultdict[str, set[str]]
 
 
-@dataclass
+@dataclasses.dataclass
 class ImportMeta:
-    module_imports: dict[str, cst.Import]
-    from_imports: dict[str, cst.ImportFrom]
+    module_imports: dict[str, cst.Import] = dataclasses.field(default_factory=dict)
+    from_imports: dict[str, cst.ImportFrom] = dataclasses.field(default_factory=dict)
 
 
 class StringTransformer:
@@ -128,6 +127,21 @@ def _get_docstring_node(
         return val
 
     return None
+
+
+def _get_full_name_for_import_from(node: cst.ImportFrom) -> str:
+    return (
+        cst.helpers.get_full_name_for_node_or_raise(node.module)
+        if node.module
+        else "." * len(node.relative)
+    )
+
+
+def _create_import_from(module_name: str, names: Iterable[str]) -> cst.ImportFrom:
+    return cst.ImportFrom(
+        module=_create_name_or_attr(module_name),
+        names=[cst.ImportAlias(cst.Name(name)) for name in names],
+    )
 
 
 class TreeTransformer:
@@ -372,29 +386,56 @@ class _AsyncTransformer(_ReplaceNamesMixin, cst.CSTTransformer):
             become unused due to the transformation
         """
         super().__init__()
-        self._current_scop_name: tuple[str, ...] = tuple()
-        self._name_replacements = name_replacements
+        self._should_remove_unused_imports = remove_unused_imports
         self._should_transform_docstrings = transform_docstrings
-        self.meta = TransformerMeta(
-            module_imports={},
-            needs_from_import=defaultdict(set),
-            exclude={tuple(p.split(".")) for p in exclude or []},
-            removed_names=defaultdict(set),
-            needs_module_import=set(),
-        )
-        self._in_import = False
-        self.attribute_replacements = {
+        self._name_replacements = name_replacements
+        self._attribute_replacements = {
             name: replacement
             for name, replacement in name_replacements.items()
             if "." in name
         }
-        self.expressions_to_remove: set[cst.Expr] = set()
-        self.scoped_node_imports: defaultdict[cst.CSTNode, ImportMeta] = defaultdict(
+
+        self._scoped_node_imports: defaultdict[cst.CSTNode, ImportMeta] = defaultdict(
             lambda: ImportMeta(module_imports={}, from_imports={})
         )
-        self._scope_nodes: list[cst.CSTNode] = []
-        self.remove_unused_imports = remove_unused_imports
+
+        self._expressions_to_remove: set[cst.Expr] = set()
         self._string_transformer = StringTransformer()
+
+        self._current_scop_name: tuple[str, ...] = tuple()
+        self._scope_nodes: list[cst.CSTNode] = []
+
+        self._if_type_checking_node: cst.If | None = None
+        self._if_type_checking_imports: set[AnyImport] = set()
+        self._in_if_type_checking_block: bool = False
+        self._in_import = False
+
+        self.meta = TransformerMeta(
+            needs_from_import=defaultdict(set),
+            needs_module_import=set(),
+            removed_names=defaultdict(set),
+            exclude={tuple(p.split(".")) for p in exclude or []},
+        )
+
+    def visit_If(self, node: cst.If) -> bool | None:
+        if (
+            isinstance(node.test, cst.Name)
+            and self.get_qualified_name(node.test) == "typing.TYPE_CHECKING"
+        ):
+            self._if_type_checking_node = node
+            self._in_if_type_checking_block = True
+
+        return None
+
+    def leave_If(self, original_node: cst.If, updated_node: cst.If) -> Any:
+        if original_node is self._if_type_checking_node:
+            self._in_if_type_checking_block = False
+
+            # replace with the updated node, so we can check for identity later on when
+            # performing transformations
+            self._if_type_checking_node = updated_node
+
+        return updated_node
 
     @property
     def current_scope_node(self) -> cst.CSTNode | None:
@@ -492,6 +533,34 @@ class _AsyncTransformer(_ReplaceNamesMixin, cst.CSTTransformer):
 
         return updated_node
 
+    def _register_import(self, node: cst.Import | cst.ImportFrom) -> None:
+        if not self.current_scope_node:
+            return
+
+        node_imports = self._scoped_node_imports[self.current_scope_node]
+        if isinstance(node, cst.Import):
+            for name in node.names:
+                node_imports.module_imports[name.evaluated_name] = node
+            return None
+
+        module_name = _get_full_name_for_import_from(node)
+        node_imports.from_imports[module_name] = node
+
+    def _leave_any_import(
+        self, original_node: AnyImport, updated_node: AnyImport
+    ) -> (
+        cst.BaseSmallStatement
+        | cst.FlattenSentinel[cst.BaseSmallStatement]
+        | cst.RemovalSentinel
+    ):
+        self._in_import = False
+
+        self._register_import(updated_node)
+        if self._in_if_type_checking_block:
+            self._if_type_checking_imports.add(updated_node)
+
+        return updated_node
+
     def visit_ImportFrom(self, node: cst.ImportFrom) -> bool:
         self._in_import = True
         return True
@@ -507,9 +576,7 @@ class _AsyncTransformer(_ReplaceNamesMixin, cst.CSTTransformer):
         | cst.FlattenSentinel[cst.BaseSmallStatement]
         | cst.RemovalSentinel
     ):
-        self._in_import = False
-        self.register_import(updated_node)
-        return updated_node
+        return self._leave_any_import(original_node, updated_node)
 
     def leave_Import(
         self, original_node: cst.Import, updated_node: cst.Import
@@ -518,26 +585,7 @@ class _AsyncTransformer(_ReplaceNamesMixin, cst.CSTTransformer):
         | cst.FlattenSentinel[cst.BaseSmallStatement]
         | cst.RemovalSentinel
     ):
-        self._in_import = False
-        self.register_import(updated_node)
-        return updated_node
-
-    def register_import(self, node: cst.Import | cst.ImportFrom) -> None:
-        if not self.current_scope_node:
-            return
-
-        node_imports = self.scoped_node_imports[self.current_scope_node]
-        if isinstance(node, cst.Import):
-            for name in node.names:
-                node_imports.module_imports[name.evaluated_name] = node
-            return None
-
-        module_name = (
-            cst.helpers.get_full_name_for_node_or_raise(node.module)
-            if node.module
-            else "." * len(node.relative)
-        )
-        node_imports.from_imports[module_name] = node
+        return self._leave_any_import(original_node, updated_node)
 
     def leave_Attribute(
         self, original_node: cst.Attribute, updated_node: cst.Attribute
@@ -545,7 +593,7 @@ class _AsyncTransformer(_ReplaceNamesMixin, cst.CSTTransformer):
         if not (qualified_name := self.get_qualified_name(original_node)):
             return updated_node
 
-        if not (replacement := self.attribute_replacements.get(qualified_name)):
+        if not (replacement := self._attribute_replacements.get(qualified_name)):
             return updated_node
 
         module_name, attr = qualified_name.rsplit(".", 1)
@@ -661,7 +709,7 @@ class _AsyncTransformer(_ReplaceNamesMixin, cst.CSTTransformer):
             if m.matches(
                 call, m.Call(args=[m.AtLeastN(m.Arg(m.Integer(value="0")), n=1)])
             ):
-                self.expressions_to_remove.add(node)
+                self._expressions_to_remove.add(node)
                 removed_mod, removed_name = qualified_name.split(".")
                 self.meta.removed_names[removed_mod].add(removed_name)
                 return False
@@ -671,7 +719,7 @@ class _AsyncTransformer(_ReplaceNamesMixin, cst.CSTTransformer):
         self, original_node: cst.Expr, updated_node: cst.Expr
     ) -> cst.BaseSmallStatement | cst.RemovalSentinel:
         """Remove expressions registered to be removed"""
-        if original_node in self.expressions_to_remove:
+        if original_node in self._expressions_to_remove:
             return cst.RemoveFromParent()
         return updated_node
 
@@ -786,12 +834,31 @@ class _AsyncTransformer(_ReplaceNamesMixin, cst.CSTTransformer):
                 return i
         return 0
 
+    def _extract_if_type_checking_imports(
+        self, existing_imports: dict[str, AnyImportT]
+    ) -> dict[str, set[str]]:
+        type_checking_imports: dict[str, set[str]] = defaultdict(set)
+        for module_name, import_ in existing_imports.items():
+            if import_ not in self._if_type_checking_imports:
+                continue
+            if not isinstance(import_.names, cst.ImportStar):
+                type_checking_imports[module_name].update(
+                    [n.evaluated_alias or n.evaluated_name for n in import_.names]
+                )
+        return type_checking_imports
+
     def _create_from_imports(
-        self, existing_from_imports: dict[str, cst.ImportFrom]
+        self,
+        existing_from_imports: dict[str, cst.ImportFrom],
+        replaced_names: dict[str, dict[str, str]],
+        new_type_checking_imports: set[AnyImport],
     ) -> tuple[dict[cst.ImportFrom, set[str]], list[cst.ImportFrom]]:
         """Return a tuple of ``FromImport``s to update and ``FromImport``s to add"""
         from_imports_to_update: defaultdict[cst.ImportFrom, set[str]] = defaultdict(set)
         from_imports_to_add: defaultdict[str, set[str]] = defaultdict(set)
+        existing_if_type_checking_imports = self._extract_if_type_checking_imports(
+            existing_from_imports
+        )
 
         for module_name, names in self.meta.needs_from_import.items():
             if _import := existing_from_imports.get(module_name):
@@ -805,25 +872,72 @@ class _AsyncTransformer(_ReplaceNamesMixin, cst.CSTTransformer):
             else:
                 from_imports_to_add[module_name].update(names)
 
-        new_from_imports = [
-            cst.ImportFrom(
-                module=_create_name_or_attr(module_name),
-                names=[cst.ImportAlias(cst.Name(name)) for name in names],
-            )
-            for module_name, names in from_imports_to_add.items()
-        ]
-        return from_imports_to_update, new_from_imports
+        new_imports = []
+        for module_name, names in from_imports_to_add.items():
+            new_import_names = set()
+            new_type_checking_import_names = set()
+
+            if replaced_imports := replaced_names.get(module_name):
+                # we have replaced names, so we check for the ones that exist
+                # exclusively within an if TYPE_CHECKING block to ensure we only add
+                # those there
+                for new_name in names:
+                    original_fq_name = replaced_imports[new_name]
+                    orig_module_name, orig_name = original_fq_name.rsplit(".", 1)
+                    if orig_name in existing_if_type_checking_imports.get(
+                        orig_module_name, []
+                    ):
+                        new_type_checking_import_names.add(new_name)
+                    else:
+                        new_import_names.add(new_name)
+            else:
+                new_import_names.update(names)
+
+            if new_import_names:
+                new_imports.append(_create_import_from(module_name, new_import_names))
+
+            if new_type_checking_import_names:
+                new_type_checking_imports.add(
+                    _create_import_from(module_name, new_type_checking_import_names)
+                )
+
+        return from_imports_to_update, new_imports
 
     def _create_module_imports(
-        self, existing_module_import: dict[str, cst.Import]
-    ) -> list[cst.Import]:
+        self,
+        existing_module_imports: dict[str, cst.Import],
+        replaced_names: dict[str, dict[str, str]],
+        type_checking_imports: set[AnyImport],
+    ) -> set[cst.Import]:
         """Return a list of ``Import``s to add"""
-        return [
-            cst.Import(names=[cst.ImportAlias(name=_create_name_or_attr(module_name))])
-            for module_name in self.meta.needs_module_import
-            if not (_import := existing_module_import.get(module_name))
-            and not isinstance(_import, cst.ImportFrom)
-        ]
+        new_imports: set[cst.Import] = set()
+        existing_tc_import = self._extract_if_type_checking_imports(
+            existing_module_imports
+        )
+        for module_name in self.meta.needs_module_import:
+            if _import := existing_module_imports.get(module_name):
+                continue
+
+            if isinstance(_import, cst.ImportFrom):
+                continue
+
+            new_import = cst.Import(
+                names=[cst.ImportAlias(name=_create_name_or_attr(module_name))]
+            )
+
+            maybe_replaced_imports = replaced_names.get(module_name)
+            if not maybe_replaced_imports:
+                new_imports.add(new_import)
+                continue
+
+            for new_name, original_fq_name in maybe_replaced_imports.items():
+                orig_module_name, _ = original_fq_name.rsplit(".", 1)
+                if orig_module_name in existing_tc_import:
+                    type_checking_imports.add(new_import)
+                else:
+                    new_imports.add(new_import)
+
+        return new_imports
 
     def _fix_module_imports(
         self,
@@ -841,27 +955,46 @@ class _AsyncTransformer(_ReplaceNamesMixin, cst.CSTTransformer):
         - Remove names from imports specified in ``imports_to_remove``. If an import has
           no names left, it is removed entirely
         """
+        maybe_replaced_names: dict[str, dict[str, str]] = defaultdict(dict)
+        add_to_typechecking_import: set[AnyImport] = set()
+
+        for name, replacement in self._name_replacements.items():
+            if "." not in name:
+                continue
+            module_name, replacement = replacement.rsplit(".", 1)
+            maybe_replaced_names[module_name][replacement] = name
+
         from_imports_to_update, new_from_imports = self._create_from_imports(
-            from_imports
+            from_imports,
+            replaced_names=maybe_replaced_names,
+            new_type_checking_imports=add_to_typechecking_import,
+        )
+        new_module_imports = self._create_module_imports(
+            module_imports,
+            replaced_names=maybe_replaced_names,
+            type_checking_imports=add_to_typechecking_import,
         )
 
         updated_node = node.visit(
             _ImportTransformer(
                 unused_imports=imports_to_remove,
                 imports_to_update=from_imports_to_update,
+                if_type_checking_node=self._if_type_checking_node,
+                type_checking_imports_to_add=add_to_typechecking_import,
             )
         )
 
-        new_module_imports = self._create_module_imports(module_imports)
         import_offset = self._find_first_non_import_line(updated_node)
+
         new_module_body = [
             *updated_node.body[:import_offset],
             *[
-                cst.SimpleStatementLine(body=[new_import])
-                for new_import in itertools.chain(new_module_imports, new_from_imports)
+                cst.SimpleStatementLine([new_import])
+                for new_import in itertools.chain(new_from_imports, new_module_imports)
             ],
             *updated_node.body[import_offset:],
         ]
+
         updated_node = updated_node.with_changes(body=new_module_body)
 
         if self._should_transform_docstrings and self._should_transform_current_node:
@@ -872,7 +1005,7 @@ class _AsyncTransformer(_ReplaceNamesMixin, cst.CSTTransformer):
     def leave_Module(
         self, original_node: cst.Module, updated_node: cst.Module
     ) -> cst.Module:
-        if self.remove_unused_imports and self.meta.removed_names:
+        if self._should_remove_unused_imports and self.meta.removed_names:
             wrapper = MetadataWrapper(updated_node)
             (
                 module_imports,
@@ -886,7 +1019,7 @@ class _AsyncTransformer(_ReplaceNamesMixin, cst.CSTTransformer):
                 imports_to_remove=imports_to_remove,
             )
 
-        import_meta = self.scoped_node_imports[original_node]
+        import_meta = self._scoped_node_imports[original_node]
         return self._fix_module_imports(
             node=updated_node,
             module_imports=import_meta.module_imports,
@@ -896,7 +1029,7 @@ class _AsyncTransformer(_ReplaceNamesMixin, cst.CSTTransformer):
 
 
 class _ImportTransformer(cst.CSTTransformer):
-    # taken from
+    # partly taken from
     # https://cst.readthedocs.io/en/latest/scope_tutorial.html#Automatically-Remove-Unused-Import
 
     def __init__(
@@ -904,10 +1037,36 @@ class _ImportTransformer(cst.CSTTransformer):
         *,
         unused_imports: dict[AnyImport, set[str]],
         imports_to_update: dict[cst.ImportFrom, set[str]],
+        if_type_checking_node: cst.If | None,
+        type_checking_imports_to_add: Iterable[AnyImport],
     ) -> None:
         super().__init__()
         self.unused_imports = unused_imports
         self.imports_to_update = imports_to_update
+        self.if_type_checking_node = if_type_checking_node
+        self.type_checking_imports_to_add = type_checking_imports_to_add
+
+    def leave_If(
+        self, original_node: cst.If, updated_node: cst.If
+    ) -> (
+        cst.BaseStatement | cst.FlattenSentinel[cst.BaseStatement] | cst.RemovalSentinel
+    ):
+        if not self.if_type_checking_node:
+            return updated_node
+
+        if original_node is not self.if_type_checking_node:
+            return updated_node
+
+        return updated_node.with_deep_changes(
+            updated_node.body,
+            body=[
+                *updated_node.body.body,
+                *[
+                    cst.SimpleStatementLine([import_])
+                    for import_ in self.type_checking_imports_to_add
+                ],
+            ],
+        )
 
     def leave_import_alike(
         self, original_node: AnyImportT, updated_node: AnyImportT
