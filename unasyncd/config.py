@@ -11,7 +11,6 @@ import msgspec
 class Config(msgspec.Struct):
     add_editors_note: bool
     transform_docstrings: bool
-    remove_unused_imports: bool
     no_cache: bool
     extra_replacements: dict[str, dict[str, str]]
     exclude: dict[str, list[str]]
@@ -69,7 +68,6 @@ def load_config(path: Path | None, **defaults: Any) -> Config:
             for file in itertools.chain(files, per_file_exclude)
         },
         add_editors_note=raw_config.get("add_editors_note", False),
-        remove_unused_imports=raw_config.get("remove_unused_imports", False),
         transform_docstrings=raw_config.get("transform_docstrings", False),
         no_cache=raw_config.get("no_cache", False),
         check_only=raw_config.get("check_only", False),

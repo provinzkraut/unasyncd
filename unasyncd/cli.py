@@ -53,15 +53,7 @@ async def _run(*, config: Config, check_only: bool, verbose: bool) -> bool:
     "--transform-docstrings",
     is_flag=True,
     default=None,
-    help="Transform module, class, method and function docstrings. CST mode only",
-)
-@click.option(
-    "-i",
-    "--remove-unused-imports",
-    is_flag=True,
-    default=None,
-    help="Remove imports that are unused as a result of the transformation. CST mode "
-    "only",
+    help="Transform module, class, method and function docstrings",
 )
 @click.option(
     "--add-editors-note",
@@ -94,7 +86,6 @@ def main(
     files: tuple[str, ...],
     no_cache: bool | None,
     transform_docstrings: bool | None,
-    remove_unused_imports: bool | None,
     check_only: bool,
     add_editors_note: bool | None,
     config_file: Path | None,
@@ -118,7 +109,6 @@ def main(
         path=config_file,
         no_cache=no_cache,
         transform_docstrings=transform_docstrings,
-        remove_unused_imports=remove_unused_imports,
         add_editors_note=add_editors_note,
         files=dict(f.split(":", 1) for f in files) if files else None,
         check_only=check_only,

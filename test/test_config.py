@@ -22,7 +22,6 @@ def test_default_config(config_from_file):
     config = config_from_file()
 
     assert config.add_editors_note is False
-    assert config.remove_unused_imports is False
     assert config.transform_docstrings is False
     assert config.no_cache is False
     assert config.check_only is False
@@ -37,7 +36,6 @@ def test_config_override(config_from_file, tmp_path):
 
     config = config_from_file(
         add_editors_note=True,
-        remove_unused_imports=True,
         transform_docstrings=True,
         no_cache=True,
         check_only=True,
@@ -46,7 +44,6 @@ def test_config_override(config_from_file, tmp_path):
     )
 
     assert config.add_editors_note is True
-    assert config.remove_unused_imports is True
     assert config.transform_docstrings is True
     assert config.no_cache is True
     assert config.check_only is True

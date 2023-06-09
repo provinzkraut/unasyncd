@@ -176,7 +176,6 @@ class Env:
         transformer = TreeTransformer(
             exclude=self.config.exclude.get(str(file), set()),
             transform_docstrings=self.config.transform_docstrings,
-            remove_unused_imports=self.config.remove_unused_imports,
             extra_name_replacements=self.config.extra_replacements.get(str(file), {}),
         )
 

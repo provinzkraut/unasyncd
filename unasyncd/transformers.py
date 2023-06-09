@@ -152,7 +152,6 @@ class TreeTransformer:
         exclude: Iterable[str] | None = None,
         transform_docstrings: bool = True,
         extra_name_replacements: dict[str, str] | None = None,
-        remove_unused_imports: bool = False,
     ) -> None:
         self.exclude = exclude
         self.transform_docstrings = transform_docstrings
@@ -160,7 +159,6 @@ class TreeTransformer:
             **NAME_REPLACEMENTS,
             **(extra_name_replacements or {}),
         }
-        self.remove_unused_imports = remove_unused_imports
 
     def __call__(self, source: str) -> str:
         if not source:
@@ -172,7 +170,6 @@ class TreeTransformer:
                 exclude=self.exclude,
                 name_replacements=self.name_replacements,
                 transform_docstrings=self.transform_docstrings,
-                remove_unused_imports=self.remove_unused_imports,
             )
         )
         output = result.code
@@ -374,7 +371,6 @@ class _AsyncTransformer(_ReplaceNamesMixin, cst.CSTTransformer):
         exclude: Iterable[str] | None = None,
         name_replacements: dict[str, str],
         transform_docstrings: bool,
-        remove_unused_imports: bool,
     ):
         """
 
@@ -382,11 +378,8 @@ class _AsyncTransformer(_ReplaceNamesMixin, cst.CSTTransformer):
             functions to exclude
         :param name_replacements: Mapping of fully qualified names to their replacements
         :param transform_docstrings: If ``True``, transform docstrings
-        :param remove_unused_imports:  If ``True`` remove module level imports that have
-            become unused due to the transformation
         """
         super().__init__()
-        self._should_remove_unused_imports = remove_unused_imports
         self._should_transform_docstrings = transform_docstrings
         self._name_replacements = name_replacements
         self._attribute_replacements = {
@@ -758,67 +751,6 @@ class _AsyncTransformer(_ReplaceNamesMixin, cst.CSTTransformer):
         )
         return updated_node
 
-    def _get_imports_from_module(
-        self, wrapper: MetadataWrapper
-    ) -> tuple[
-        dict[str, cst.Import], dict[str, cst.ImportFrom], dict[AnyImport, set[str]]
-    ]:
-        """Gather information about module level imports.
-
-        Return a tuple of:
-            - ``Import`` statements
-            - ``ImportFrom`` statements
-            - Imported names that have become unused due to the applied transformations
-        """
-        from_imports: dict[str, cst.ImportFrom] = {}
-        module_imports: dict[str, cst.Import] = {}
-        imports_to_remove: defaultdict[AnyImport, set[str]] = defaultdict(set)
-        scopes = set(
-            s
-            for s in wrapper.resolve(ScopeProvider).values()
-            if isinstance(s, cst.metadata.GlobalScope)
-        )
-        scope = scopes.pop()
-
-        for assignment in scope.assignments:
-            if not isinstance(assignment, cst.metadata.Assignment):
-                continue
-
-            node = assignment.node
-
-            if isinstance(node, cst.Import):
-                module_imports[assignment.name] = node
-
-                if assignment.references:
-                    continue
-
-                removed_names = self.meta.removed_names.get(assignment.name)
-                if removed_names:
-                    imports_to_remove[node].add(assignment.name)
-
-            elif isinstance(node, cst.ImportFrom):
-                module_name = (
-                    cst.helpers.get_full_name_for_node_or_raise(node.module)
-                    if node.module
-                    else "." * len(node.relative)
-                )
-                from_imports[module_name] = node
-
-                if assignment.references:
-                    continue
-
-                if not (removed_names := self.meta.removed_names.get(module_name)):
-                    continue
-
-                if isinstance(node.names, cst.ImportStar):
-                    continue
-
-                imported_names = {alias.evaluated_name for alias in node.names}
-                if names_to_remove := imported_names.intersection(removed_names):
-                    imports_to_remove[node].update(names_to_remove)
-
-        return module_imports, from_imports, imports_to_remove
-
     def _find_first_non_import_line(self, updated_node: cst.Module) -> int:
         """Get the index of the first line of the module that is not an import,
         skipping module level docstrings and comments.
@@ -945,7 +877,6 @@ class _AsyncTransformer(_ReplaceNamesMixin, cst.CSTTransformer):
         node: cst.Module | MetadataWrapper,
         from_imports: dict[str, cst.ImportFrom],
         module_imports: dict[str, cst.Import],
-        imports_to_remove: dict[AnyImport, set[str]],
     ) -> cst.Module:
         """Modify a module's imports.
 
@@ -977,7 +908,6 @@ class _AsyncTransformer(_ReplaceNamesMixin, cst.CSTTransformer):
 
         updated_node = node.visit(
             _ImportTransformer(
-                unused_imports=imports_to_remove,
                 imports_to_update=from_imports_to_update,
                 if_type_checking_node=self._if_type_checking_node,
                 type_checking_imports_to_add=add_to_typechecking_import,
@@ -997,35 +927,22 @@ class _AsyncTransformer(_ReplaceNamesMixin, cst.CSTTransformer):
 
         updated_node = updated_node.with_changes(body=new_module_body)
 
-        if self._should_transform_docstrings and self._should_transform_current_node:
-            updated_node = self._transform_docstring(updated_node)
-
         return updated_node
 
     def leave_Module(
         self, original_node: cst.Module, updated_node: cst.Module
     ) -> cst.Module:
-        if self._should_remove_unused_imports and self.meta.removed_names:
-            wrapper = MetadataWrapper(updated_node)
-            (
-                module_imports,
-                from_imports,
-                imports_to_remove,
-            ) = self._get_imports_from_module(wrapper)
-            return self._fix_module_imports(
-                node=wrapper,
-                module_imports=module_imports,
-                from_imports=from_imports,
-                imports_to_remove=imports_to_remove,
-            )
-
         import_meta = self._scoped_node_imports[original_node]
-        return self._fix_module_imports(
+        updated_node = self._fix_module_imports(
             node=updated_node,
             module_imports=import_meta.module_imports,
             from_imports=import_meta.from_imports,
-            imports_to_remove={},
         )
+
+        if self._should_transform_docstrings and self._should_transform_current_node:
+            updated_node = self._transform_docstring(updated_node)
+
+        return updated_node
 
 
 class _ImportTransformer(cst.CSTTransformer):
@@ -1035,13 +952,11 @@ class _ImportTransformer(cst.CSTTransformer):
     def __init__(
         self,
         *,
-        unused_imports: dict[AnyImport, set[str]],
         imports_to_update: dict[cst.ImportFrom, set[str]],
         if_type_checking_node: cst.If | None,
         type_checking_imports_to_add: Iterable[AnyImport],
     ) -> None:
         super().__init__()
-        self.unused_imports = unused_imports
         self.imports_to_update = imports_to_update
         self.if_type_checking_node = if_type_checking_node
         self.type_checking_imports_to_add = type_checking_imports_to_add
@@ -1071,17 +986,12 @@ class _ImportTransformer(cst.CSTTransformer):
     def leave_import_alike(
         self, original_node: AnyImportT, updated_node: AnyImportT
     ) -> AnyImportT | cst.RemovalSentinel:
-        if original_node not in self.unused_imports or isinstance(
-            updated_node.names, cst.ImportStar
-        ):
+        if isinstance(updated_node.names, cst.ImportStar):
             return updated_node
 
         names_to_keep = []
         for name in updated_node.names:
-            name_value = name.name.value
-
-            if name_value not in self.unused_imports[original_node]:
-                names_to_keep.append(name.with_changes(comma=cst.MaybeSentinel.DEFAULT))
+            names_to_keep.append(name.with_changes(comma=cst.MaybeSentinel.DEFAULT))
 
         if len(names_to_keep) == 0:
             return cst.RemoveFromParent()

@@ -116,7 +116,6 @@ def test_set_config_file(
 
 
 @pytest.mark.parametrize("transform_docstrings", [True, False])
-@pytest.mark.parametrize("remove_unused_imports", [True, False])
 @pytest.mark.parametrize("add_editors_note", [True, False])
 @pytest.mark.parametrize("check_only", [True, False])
 @pytest.mark.parametrize("force_regen", [True, False])
@@ -124,7 +123,6 @@ def test_config_options(
     runner: CliRunner,
     mock_unasync_files: MagicMock,
     transform_docstrings: bool,
-    remove_unused_imports: bool,
     add_editors_note: bool,
     check_only: bool,
     force_regen: bool,
@@ -138,9 +136,6 @@ def test_config_options(
 
     if transform_docstrings:
         arguments.append("--transform-docstrings")
-
-    if remove_unused_imports:
-        arguments.append("--remove-unused-imports")
 
     if add_editors_note:
         arguments.append("--add-editors-note")
@@ -158,7 +153,6 @@ def test_config_options(
     config = mock_unasync_files.call_args_list[0].kwargs["config"]
 
     assert config.transform_docstrings is transform_docstrings
-    assert config.remove_unused_imports is remove_unused_imports
     assert config.add_editors_note is add_editors_note
     assert config.check_only is check_only
     assert config.force_regen is force_regen
@@ -201,12 +195,7 @@ def test_return_code(
 
 
 def test_transform(runner: CliRunner, source_file: Path, target_file: Path) -> None:
-    result = runner.invoke(
-        main,
-        [
-            f"{source_file}:{target_file}",
-        ],
-    )
+    result = runner.invoke(main, [f"{source_file}:{target_file}"])
 
     assert result.exit_code == 1
     assert target_file.read_text() == TEST_TRANSFORMED_CONTENT
