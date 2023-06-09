@@ -115,41 +115,42 @@ def test_set_config_file(
     assert mock_load_config.call_args_list[0].kwargs["path"] == config_path
 
 
-@pytest.mark.parametrize("no_infer_type_checking_import", [True, False])
-@pytest.mark.parametrize("transform_docstrings", [True, False])
-@pytest.mark.parametrize("add_editors_note", [True, False])
-@pytest.mark.parametrize("check_only", [True, False])
-@pytest.mark.parametrize("force_regen", [True, False])
-def test_config_options(
+@pytest.mark.parametrize(
+    "flag_value, config_value",
+    [
+        (True, True),
+        (False, False),
+        (True, False),
+        (False, True),
+    ],
+)
+def test_feature_flags(
     runner: CliRunner,
     mock_unasync_files: MagicMock,
-    transform_docstrings: bool,
-    add_editors_note: bool,
-    check_only: bool,
-    force_regen: bool,
     source_file: Path,
     target_file: Path,
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
-    no_infer_type_checking_import: bool,
+    flag_value: bool,
+    config_value: bool,
 ):
     monkeypatch.chdir(tmp_path)
     arguments = [f"{source_file}:{target_file}"]
 
-    if transform_docstrings:
-        arguments.append("--transform-docstrings")
+    arguments.extend(
+        [
+            f"--{'no-' if not flag_value else ''}{flag}"
+            for flag in [
+                "transform-docstrings",
+                "add-editors-note",
+                "infer-type-checking-imports",
+                "force",
+                "cache",
+            ]
+        ]
+    )
 
-    if add_editors_note:
-        arguments.append("--add-editors-note")
-
-    if check_only:
-        arguments.append("--check")
-
-    if force_regen:
-        arguments.append("--force")
-
-    if no_infer_type_checking_import:
-        arguments.append("--no-infer-type-checking-imports")
+    arguments.append("--check" if flag_value else "--write")
 
     result = runner.invoke(main, arguments)
 
@@ -157,11 +158,12 @@ def test_config_options(
     assert result.exit_code == 0
     config = mock_unasync_files.call_args_list[0].kwargs["config"]
 
-    assert config.transform_docstrings is transform_docstrings
-    assert config.add_editors_note is add_editors_note
-    assert config.check_only is check_only
-    assert config.force_regen is force_regen
-    assert config.infer_type_checking_imports is not no_infer_type_checking_import
+    assert config.transform_docstrings is flag_value
+    assert config.add_editors_note is flag_value
+    assert config.force_regen is flag_value
+    assert config.infer_type_checking_imports is flag_value
+    assert config.cache is flag_value
+    assert config.check_only is flag_value
 
 
 def test_pass_files(

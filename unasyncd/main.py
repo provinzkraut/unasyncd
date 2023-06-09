@@ -247,7 +247,7 @@ class Env:
                 source=source_file, target=target_file, transformed=False
             )
 
-        if not self.config.no_cache:
+        if self.config.cache:
             if await self._restore_from_cache(source_file, target_file):
                 return TransformationResult(
                     source=source_file, target=target_file, transformed=True
@@ -275,7 +275,7 @@ class Env:
 
             await self.set_meta(target_file)
 
-        if not self.config.no_cache:
+        if self.config.cache:
             await self.cache.set(
                 await self._cache_key_for(source_file), transformed_content
             )

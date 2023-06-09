@@ -1,9 +1,14 @@
 import asyncio
 import time
 from pathlib import Path
+from typing import TYPE_CHECKING
 
-import click
 import rich
+
+if TYPE_CHECKING:
+    import click
+else:
+    import rich_click as click
 
 from .config import Config, load_config
 from .main import unasync_files
@@ -47,27 +52,37 @@ async def _run(*, config: Config, check_only: bool, verbose: bool) -> bool:
 
 
 @click.command()
-@click.option("--no-cache", is_flag=True, help="Disable caching", default=None)
 @click.option(
-    "-d",
-    "--transform-docstrings",
+    "--cache/--no-cache",
+    is_flag=True,
+    help="Cache transformation results",
+    default=None,
+)
+@click.option(
+    "--transform-docstrings/--no-transform-docstrings",
     is_flag=True,
     default=None,
     help="Transform module, class, method and function docstrings",
 )
 @click.option(
-    "--no-infer-type-checking-imports",
+    "--infer-type-checking-imports/--no-infer-type-checking-imports",
     is_flag=True,
     default=None,
-    help="Don't infer if new imports should go in an if TYPE_CHECKING block",
+    help="Infer if new imports should be added to an 'if TYPE_CHECKING' block",
 )
 @click.option(
-    "--add-editors-note",
+    "--add-editors-note/--no-add-editors-note",
     is_flag=True,
     default=None,
-    help="Don't add an editors note to the generated files",
+    help="Add an editors note to the generated files",
 )
-@click.option("--check", "check_only", is_flag=True, help="Don't write changes back")
+@click.option(
+    "--check/--write",
+    "check_only",
+    is_flag=True,
+    default=None,
+    help="Write changes back",
+)
 @click.option(
     "-c",
     "--config",
@@ -76,8 +91,8 @@ async def _run(*, config: Config, check_only: bool, verbose: bool) -> bool:
     type=click.Path(dir_okay=False, path_type=Path),
 )
 @click.option(
-    "-f",
-    "--force",
+    "-f/-F",
+    "--force/--no-force",
     "force_regen",
     help="Force regeneration regardless of changes",
     is_flag=True,
@@ -90,9 +105,9 @@ async def _run(*, config: Config, check_only: bool, verbose: bool) -> bool:
 @click.argument("files", nargs=-1)
 def main(
     files: tuple[str, ...],
-    no_cache: bool | None,
+    cache: bool | None,
     transform_docstrings: bool | None,
-    no_infer_type_checking_imports: bool | None,
+    infer_type_checking_imports: bool | None,
     check_only: bool,
     add_editors_note: bool | None,
     config_file: Path | None,
@@ -114,15 +129,13 @@ def main(
 
     config = load_config(
         path=config_file,
-        no_cache=no_cache,
+        cache=cache,
         transform_docstrings=transform_docstrings,
         add_editors_note=add_editors_note,
         files=dict(f.split(":", 1) for f in files) if files else None,
         check_only=check_only,
         force_regen=force_regen,
-        infer_type_checking_imports=False
-        if no_infer_type_checking_imports is not None
-        else None,
+        infer_type_checking_imports=infer_type_checking_imports,
     )
 
     if not config.files:
