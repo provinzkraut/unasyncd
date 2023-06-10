@@ -1438,3 +1438,14 @@ def test_disable_infer_type_checking_imports() -> None:
     """
 
     assert transformer(dedent(source)) == dedent(expected)
+
+
+def test_preserve_import_formatting(transformer: TreeTransformer) -> None:
+    source = """
+    from typing import (
+        AsyncGenerator,
+        Generator,
+    )
+    """
+
+    assert transformer(dedent(source)) == dedent(source)
