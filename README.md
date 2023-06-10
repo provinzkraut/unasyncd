@@ -397,7 +397,7 @@ Unasyncd is available as a pre-commit hook:
 
 ```yaml
 - repo: https://github.com/provinzkraut/unasyncd
-  rev: v0.2.0
+  rev: v0.2.1
   hooks:
     - id: unasyncd
 ```
