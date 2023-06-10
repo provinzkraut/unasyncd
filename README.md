@@ -8,36 +8,40 @@ Unasyncd is largely inspired by [unasync](https://github.com/python-trio/unasync
 a detailed discussion about this approach can be found
 [here](https://github.com/urllib3/urllib3/issues/1323).
 
-The goal is essentially to reduce to burden of having to maintain both a synchronous and
-an asynchronous version of otherwise functionally identical code. The idea behind
-simply "taking out the async" is that often, synchronous and asynchronous code only
-differ very slightly: A few `await`s, `async def`s and `async with`s, and a couple of
-different method names. The unasync approach makes use of this and provides a way to
-use the asynchronous version as a source of truth from wich the synchronous version can
-be generated.
+Its purpose is to reduce to burden of having to maintain both a synchronous and an
+asynchronous version of otherwise functionally identical code. The idea behind simply
+"taking out the async" is that often, synchronous and asynchronous code only differ
+slightly: A few `await`s, `async def`s, `async with`s, and a couple of different method
+names. The unasync approach makes use of this by treating the asynchronous version as a
+source of truth from wich the synchronous version is then generated.
 
 ## Why unasyncd?
 
-The original [unasync](https://github.com/python-trio/unasync) takes a very simplistic
-approach and works by replacing tokens. This works well enough for most basic use cases,
-but can be somewhat restrictive in the way the code can be written. More complex cases
-such as exclusion of functions / classes or transformations such as `AsyncExitStack` to
-`ExitStack` are not possible, which leads to the introduction of shims, introducing
-additional complexity.
+The original [unasync](https://github.com/python-trio/unasync) works by simply replacing
+certain token, which is enough for most basic use cases, but can be somewhat restrictive
+in the way the code can be written. More complex cases such as exclusion of functions /
+classes or transformations (such as `AsyncExitStack` to `ExitStack` wich have not only
+different names but also different method names that then need to be replaced only
+within a certain scope) are not possible. This can lead to the introduction of shims,
+introducing additional complexity.
 
-Unasyncd leverages [libcst](https://libcst.readthedocs.io/), enabling a more granular
-control and more complex transformations.
+Unasyncd's goal is to impose as little restrictions as possible to the way the
+asynchronous code can be written, as long as it maps to a functionally equivalent
+synchronous version.
+
+To achieve this, unasyncd leverages [libcst](https://libcst.readthedocs.io/), enabling a
+more granular control and complex transformations.
 
 Unasyncd features:
 
 1. Transformation of arbitrary modules, not bound to any specific directory structure
 2. (Per-file) Exclusion of (nested) functions, classes and methods
-3. Optional transformation of docstring
+3. Optional transformation of docstrings
 4. Replacements based on fully qualified names
    (e.g. `typing.AsyncGenerator` is different than `foo.typing.AsyncGenerator`)
 5. Transformation of constructs like `asyncio.TaskGroup` to a thread based equivalent
 
-*A full list of available transformations is available below.*
+*A full list of supported transformations is available below.*
 
 ## Table of contents
 
@@ -80,13 +84,13 @@ replacements to more complex transformations such as task groups.
 
 ### Asynchronous functions
 
-Asynchronous functions and methods are replaced with a synchronous version:
-
+*Async*
 ```python
 async def foo() -> str:
     return "hello"
 ```
 
+*Sync*
 ```python
 def foo() -> str:
     return "hello"
@@ -94,18 +98,19 @@ def foo() -> str:
 
 ### `await`
 
-`await` expressions will be unwrapped:
-
+*Async*
 ```python
 await foo()
 ```
 
+*Sync*
 ```python
 foo()
 ```
 
 ### Asynchronous iterators, iterables and generators
 
+*Async*
 ```python
 from typing import AsyncGenerator
 
@@ -113,6 +118,7 @@ async def foo() -> AsyncGenerator[str, None]:
     yield "hello"
 ```
 
+*Sync*
 ```python
 from typing import Generator
 
@@ -120,6 +126,7 @@ def foo() -> Generator[str, None, None]:
     yield "hello"
 ```
 
+*Async*
 ```python
 from typing import AsyncIterator
 
@@ -131,6 +138,7 @@ class Foo:
         raise StopAsyncIteration
 ```
 
+*Sync*
 ```python
 from typing import Iterator
 
@@ -142,29 +150,35 @@ class Foo:
         ...
 ```
 
+*Async*
 ```python
 x = aiter(foo)
 ```
 
+*Sync*
 ```python
 x = iter(foo)
 ```
 
+*Async*
 ```python
 x = await anext(foo)
 ```
 
+*Sync*
 ```python
 x = next(foo)
 ```
 
 ### Asynchronous iteration
 
+*Async*
 ```python
 async for x in foo():
     pass
 ```
 
+*Sync*
 ```python
 for x in foo():
     pass
@@ -172,16 +186,19 @@ for x in foo():
 
 ### Asynchronous context managers
 
+*Async*
 ```python
 async with foo() as something:
     pass
 ```
 
+*Sync*
 ```python
 with foo() as something:
     pass
 ```
 
+*Async*
 ```python
 class Foo:
     async def __aenter__(self):
@@ -191,6 +208,7 @@ class Foo:
         ...
 ```
 
+*Async*
 ```python
 class Foo:
     def __enter__(self):
@@ -200,6 +218,7 @@ class Foo:
         ...
 ```
 
+*Async*
 ```python
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
@@ -209,6 +228,7 @@ async def foo() -> AsyncGenerator[str, None]:
     yield "hello"
 ```
 
+*Sync*
 ```python
 from contextlib import contextmanager
 from typing import Generator
@@ -220,6 +240,7 @@ def foo() -> Generator[str, None, None]:
 
 ### `contextlib.AsyncExitStack`
 
+*Async*
 ```python
 import contextlib
 
@@ -235,6 +256,7 @@ async with contextlib.AsyncExitStack() as exit_stack:
     await exit_stack.aclose()
 ```
 
+*Sync*
 ```python
 import contextlib
 
@@ -254,6 +276,7 @@ See [limitations](#limitations)
 
 ### `asyncio.TaskGroup`
 
+*Async*
 ```python
 import asyncio
 
@@ -261,6 +284,7 @@ async with asyncio.TaskGroup() as task_group:
     task_group.create_task(something(1, 2, 3, this="that"))
 ```
 
+*Sync*
 ```python
 import concurrent.futures
 
@@ -273,6 +297,7 @@ See [limitations](#limitations)
 
 ### `anyio.create_task_group`
 
+*Async*
 ```python
 import anyio
 
@@ -280,6 +305,7 @@ async with anyio.create_task_group() as task_group:
     task_group.start_soon(something, 1, 2, 3)
 ```
 
+*Sync*
 ```python
 import concurrent.futures
 
@@ -293,12 +319,14 @@ See [limitations](#limitations)
 
 Calls to `asyncio.sleep` and `anyio.sleep` will be replaced with calls to `time.sleep`:
 
+*Async*
 ```python
 import asyncio
 
 await asyncio.sleep(1)
 ```
 
+*Sync*
 ```python
 import time
 
@@ -326,13 +354,15 @@ await asyncio.sleep(0)
 
 Simply token replacement is available in docstrings:
 
+*Async*
 ```python
 async def foo():
     """This calls ``await bar()`` and ``asyncio.sleep``"""
 ```
 
+*Sync*
 ```python
-async def foo():
+def foo():
     """This calls ``bar()`` and ``time.sleep``"""
 ```
 
@@ -495,27 +525,13 @@ isort or black. It follows a few basic rules:
 3. New imports are added before the first non-import block that's not a docstring or a
    comment
 
-By default, unasyncd will not remove imports that have become unused as a result of the
-applied transformations. This is because tracking of usages is a complex task and best
-left to tools made specifically for this job like [ruff](https://beta.ruff.rs/docs) or
-[autoflake](https://github.com/PyCQA/autoflake). It can also be a performance benefit
-of not doing this work twice, e.g. when employing one of the aforementioned tools either
-way.
+Unasyncd will not remove imports that have become unused as a result of the applied
+transformations. This is because tracking of usages is a complex task and best left to
+tools made specifically for this job like [ruff](https://beta.ruff.rs/docs) or
+[autoflake](https://github.com/PyCQA/autoflake).
 
-
-### Integration with linters and formatters
-
-Unasyncd should be run **after** tools that change the AST (e.g. isort, ruff), and
-**before** tools that apply transformations in a way that does not change the AST
-(e.g. black).
-
-The reason for this is to avoid multiple passes being required until a stable state is
-reached. Since unasyncd will only re-apply transformations to files which are no longer
-AST equivalent, running it after tools that break AST equivalence solve this issue.
-
-In practice this means all transformations aside from comments and formatting should be
-applied before unasyncd.
-
+Not doing this work twice - e.g. employing a tool to automatically remove unused
+imports alongside unasyncd - can also be a significant performance improvement.
 
 ### Limitations
 
