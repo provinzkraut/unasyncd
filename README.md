@@ -208,7 +208,7 @@ class Foo:
         ...
 ```
 
-*Async*
+*Sync*
 ```python
 class Foo:
     def __enter__(self):
