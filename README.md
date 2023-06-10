@@ -72,7 +72,6 @@ Unasyncd features:
       * [Exclusions](#exclusions)
       * [Extending name replacements](#extending-name-replacements)
     * [Handling of imports](#handling-of-imports)
-    * [Integration with linters and formatters](#integration-with-linters-and-formatters)
     * [Limitations](#limitations)
     * [Disclaimer](#disclaimer)
 <!-- TOC -->
@@ -398,7 +397,7 @@ Unasyncd is available as a pre-commit hook:
 
 ```yaml
 - repo: https://github.com/provinzkraut/unasyncd
-  rev: v0.1.0
+  rev: v0.2.0
   hooks:
     - id: unasyncd
 ```
