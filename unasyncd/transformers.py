@@ -956,9 +956,6 @@ class _AsyncTransformer(_ReplaceNamesMixin, cst.CSTTransformer):
 
 
 class _ImportTransformer(cst.CSTTransformer):
-    # partly taken from
-    # https://cst.readthedocs.io/en/latest/scope_tutorial.html#Automatically-Remove-Unused-Import
-
     def __init__(
         self,
         *,
@@ -993,26 +990,6 @@ class _ImportTransformer(cst.CSTTransformer):
             ],
         )
 
-    def leave_import_alike(
-        self, original_node: AnyImportT, updated_node: AnyImportT
-    ) -> AnyImportT | cst.RemovalSentinel:
-        if isinstance(updated_node.names, cst.ImportStar):
-            return updated_node
-
-        names_to_keep = []
-        for name in updated_node.names:
-            names_to_keep.append(name.with_changes(comma=cst.MaybeSentinel.DEFAULT))
-
-        if len(names_to_keep) == 0:
-            return cst.RemoveFromParent()
-        else:
-            return updated_node.with_changes(names=names_to_keep)  # type: ignore[return-value]  # noqa: E501
-
-    def leave_Import(
-        self, original_node: cst.Import, updated_node: cst.Import
-    ) -> cst.Import | cst.RemovalSentinel:
-        return self.leave_import_alike(original_node, updated_node)
-
     def leave_ImportFrom(
         self, original_node: cst.ImportFrom, updated_node: cst.ImportFrom
     ) -> cst.ImportFrom | cst.RemovalSentinel:
@@ -1030,7 +1007,7 @@ class _ImportTransformer(cst.CSTTransformer):
                 names=[*current_names, *new_aliases]
             )
 
-        return self.leave_import_alike(original_node, updated_node)
+        return updated_node
 
     # since we're only interested in module level imports, we don't need to visit
     # class and function definitions
