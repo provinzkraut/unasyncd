@@ -6,8 +6,8 @@ import re
 import subprocess
 import sys
 from collections import defaultdict
-from collections.abc import Callable, Iterable, Sequence
-from typing import Any, TypeVar
+from collections.abc import Iterable, Sequence
+from typing import Any, Callable, TypeVar, Union
 
 import libcst as cst
 import libcst.matchers as m
@@ -15,8 +15,10 @@ from libcst import MetadataWrapper
 from libcst.metadata import QualifiedName, ScopeProvider
 from libcst.native import parse_module
 
-AnyImport = cst.ImportFrom | cst.Import
-ScopedNodeT = TypeVar("ScopedNodeT", bound=cst.Module | cst.FunctionDef | cst.ClassDef)
+AnyImport = Union[cst.ImportFrom, cst.Import]
+ScopedNodeT = TypeVar(
+    "ScopedNodeT", bound=Union[cst.Module, cst.FunctionDef, cst.ClassDef]
+)
 AnyImportT = TypeVar("AnyImportT", bound=AnyImport)
 
 
@@ -116,7 +118,7 @@ def _get_docstring_node(
     else:
         expr = body
 
-    while isinstance(expr, cst.BaseSuite | cst.SimpleStatementLine):
+    while isinstance(expr, (cst.BaseSuite, cst.SimpleStatementLine)):
         if len(expr.body) == 0:
             return None
 
@@ -125,7 +127,7 @@ def _get_docstring_node(
         return None
 
     val = expr.value
-    if isinstance(val, cst.SimpleString | cst.ConcatenatedString):
+    if isinstance(val, (cst.SimpleString, cst.ConcatenatedString)):
         return val
 
     return None
