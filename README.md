@@ -72,6 +72,7 @@ Unasyncd features:
       * [Exclusions](#exclusions)
       * [Extending name replacements](#extending-name-replacements)
     * [Handling of imports](#handling-of-imports)
+    * [Integration with linters](#integration-with-linters)
     * [Limitations](#limitations)
     * [Disclaimer](#disclaimer)
 <!-- TOC -->
@@ -421,6 +422,7 @@ file or the command line interface.
 | `infer_type_checking_imports` | bool  | true    | Infer if new imports should be added to an 'if TYPE_CHECKING' block                |
 | `cache`                       | bool  | true    | Cache transformation results                                                       |
 | `force_regen`                 | bool  | false   | Always regenerate files, regardless if their content has changed                   |
+| `ruff_fix`                    | bool  | false   | Run `ruff --fix` on the generated code                                             |
 
 **Example**
 
@@ -440,7 +442,8 @@ force_regen = false
 
 #### CLI options
 
-*Feature flags corresponding to configuration values*
+*Feature flags corresponding to configuration values. These will override the
+configuration file values*
 
 | option                             | description                                                         |
 |------------------------------------|---------------------------------------------------------------------|
@@ -452,6 +455,8 @@ force_regen = false
 | `--no-infer-type-checking-imports` | Inverse of `infer-type-checking-imports`                            |
 | `--add-editors-note`               | Add a note on top of each generated file                            |
 | `--no-add-editors-note`            | Inverse of `--add-editors-note`                                     |
+| `--ruff-fix`                       | Run `ruff --fix` on the generated code                              |
+| `--no-ruff-fix`                    | Inverse of `--ruff-fix`                                             |
 | `--force`                          | Always regenerate files, regardless if their content has changed    |
 | `--no-force`                       | Inverse of `--force`                                                |
 | `--check`                          | Don't write changes back to files                                   |
@@ -529,8 +534,36 @@ transformations. This is because tracking of usages is a complex task and best l
 tools made specifically for this job like [ruff](https://beta.ruff.rs/docs) or
 [autoflake](https://github.com/PyCQA/autoflake).
 
-Not doing this work twice - e.g. employing a tool to automatically remove unused
-imports alongside unasyncd - can also be a significant performance improvement.
+
+### Integration with linters
+
+Using unasyncd in conjunction with linters offering autofixing behaviour can lead to an
+edit-loop, where unasyncd generates a new file which the other tool then changes in a
+non-AST-equivalent way - for example by removing an import that has become unused as a
+result of the transformation applied by unasyncd -, in turn causing unasyncd to
+regenerate the file the next time it is invoked, since the target file is no longer
+AST-equivalent to what unasyncd thinks it should be.
+
+To alleviate this, unasyncd offers a [ruff](https://beta.ruff.rs/docs) integration,
+which can automatically run `ruff --fix` on the generated code before writing it back.
+It will use the existing ruff configuration for this to ensure the fixes applied to
+adhere to the rules used throughout the project.
+
+If this option is used, the transformed code will never be altered by ruff, therefore
+breaking the cycle.
+
+This option can be enabled with the `ruff_fix = true` feature flag, or by using the
+`--ruff-fix` CLI flag.
+
+Usage of this option requires an installation of `ruff`. If not independently installed,
+it can be installed as an extra of unasyncd: `pip install unasyncd[ruff]`.
+
+**Why is only ruff supported?**
+
+Ruff was chosen for its speed, having a negligible impact on the overall performance of
+unasyncd, and because it can replace most of the common linters / tools with autofixing
+capabilities, removing the need for separate integrations.
+
 
 ### Limitations
 

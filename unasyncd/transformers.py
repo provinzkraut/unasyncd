@@ -3,8 +3,10 @@ from __future__ import annotations
 import dataclasses
 import itertools
 import re
+import subprocess
+import sys
 from collections import defaultdict
-from collections.abc import Iterable, Sequence
+from collections.abc import Callable, Iterable, Sequence
 from typing import Any, TypeVar
 
 import libcst as cst
@@ -153,6 +155,7 @@ class TreeTransformer:
         transform_docstrings: bool = True,
         extra_name_replacements: dict[str, str] | None = None,
         infer_type_checking_imports: bool = True,
+        ruff_fix: bool = False,
     ) -> None:
         self.exclude = exclude
         self.transform_docstrings = transform_docstrings
@@ -161,6 +164,35 @@ class TreeTransformer:
             **(extra_name_replacements or {}),
         }
         self.infer_type_checking_imports = infer_type_checking_imports
+        self._post_transforms: list[Callable[[str, str, cst.Module], str]] = [
+            self._fix_newlines
+        ]
+        if ruff_fix:
+            self._post_transforms.append(self._run_ruff)
+
+    def _run_ruff(self, source: str, output: str, tree: cst.Module) -> str:
+        with subprocess.Popen(
+            [
+                sys.executable,
+                "-m",
+                "ruff",
+                "--no-cache",
+                "--fix",
+                "--quiet",
+                "-",
+            ],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            stdin=subprocess.PIPE,
+            encoding="utf-8",
+        ) as process:
+            return process.communicate(input=output)[0]
+
+    def _fix_newlines(self, source: str, output: str, tree: cst.Module) -> str:
+        # newlines at the end can get lost so ensure we have one
+        if source[-1] == tree.default_newline and not tree.has_trailing_newline:
+            output += tree.default_newline
+        return output
 
     def __call__(self, source: str) -> str:
         if not source:
@@ -176,10 +208,9 @@ class TreeTransformer:
             )
         )
         output = result.code
+        for post_transform in self._post_transforms:
+            output = post_transform(source, output, result)
 
-        # newlines at the end can get lost so ensure we have one
-        if source[-1] == result.default_newline and not result.has_trailing_newline:
-            output += result.default_newline
         return output
 
 

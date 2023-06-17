@@ -178,6 +178,7 @@ class Env:
             transform_docstrings=self.config.transform_docstrings,
             extra_name_replacements=self.config.extra_replacements.get(str(file), {}),
             infer_type_checking_imports=self.config.infer_type_checking_imports,
+            ruff_fix=self.config.ruff_fix,
         )
 
         content = await file.get_content()
