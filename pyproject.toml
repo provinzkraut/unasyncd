@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "unasyncd"
-version = "0.3.0"
+version = "0.4.0"
 description = "A tool to transform asynchronous Python code to synchronous Python code."
 authors = ["Janek Nouvertné <j.a.nouvertne@posteo.de>"]
 license = "MIT"
