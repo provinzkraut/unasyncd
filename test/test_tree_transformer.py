@@ -1470,3 +1470,21 @@ def test_ruff_fix(tmp_path, monkeypatch) -> None:
     """
 
     assert transformer(dedent(source)) == dedent(expected)
+
+
+def test_async_comprehension(transformer: TreeTransformer) -> None:
+    source = """
+    [x async for x in foo()]
+    {x async for x in foo()}
+    (x async for x in foo())
+    {x: 1 async for x in foo()}
+    """
+
+    expected = """
+    [x for x in foo()]
+    {x for x in foo()}
+    (x for x in foo())
+    {x: 1 for x in foo()}
+    """
+
+    assert transformer(dedent(source)) == dedent(expected)
