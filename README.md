@@ -184,6 +184,16 @@ for x in foo():
     pass
 ```
 
+*Async*
+```python
+[x async for x in foo()]
+```
+
+*Sync*
+```python
+[x for x in foo()]
+```
+
 ### Asynchronous context managers
 
 *Async*

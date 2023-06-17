@@ -765,6 +765,13 @@ class _AsyncTransformer(_ReplaceNamesMixin, cst.CSTTransformer):
             updated_node = updated_node.with_changes(asynchronous=None)
         return updated_node
 
+    def leave_CompFor(
+        self, original_node: cst.CompFor, updated_node: cst.CompFor
+    ) -> cst.CompFor:
+        if updated_node.asynchronous:
+            updated_node = updated_node.with_changes(asynchronous=None)
+        return updated_node
+
     def leave_Subscript(
         self, original_node: cst.Subscript, updated_node: cst.Subscript
     ) -> cst.Subscript:
