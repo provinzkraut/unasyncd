@@ -469,7 +469,7 @@ dev = ["pre-commit"]
 name = "ruff"
 version = "0.0.272"
 description = "An extremely fast Python linter, written in Rust."
-optional = true
+optional = false
 python-versions = ">=3.7"
 files = [
     {file = "ruff-0.0.272-py3-none-macosx_10_7_x86_64.whl", hash = "sha256:ae9b57546e118660175d45d264b87e9b4c19405c75b587b6e4d21e6a17bf4fdf"},
@@ -581,4 +581,4 @@ ruff = ["ruff"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "e5baac0e5b04781a3a61f698c948a853181ed68d7c99911676335993364ae060"
+content-hash = "0d5d4d8dc9fc9f0e39d34519cd545564a34853af0f02c2e187a9a093d53032b2"
