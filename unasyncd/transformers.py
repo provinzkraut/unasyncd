@@ -164,9 +164,7 @@ class TreeTransformer:
             **(extra_name_replacements or {}),
         }
         self.infer_type_checking_imports = infer_type_checking_imports
-        self._post_transforms: list[Callable[[str, str, cst.Module], str]] = [
-            self._fix_newlines
-        ]
+        self._post_transforms: list[Callable[[str, str, cst.Module], str]] = []
         if ruff_fix:
             self._post_transforms.append(self._run_ruff)
 
@@ -187,12 +185,6 @@ class TreeTransformer:
             encoding="utf-8",
         ) as process:
             return process.communicate(input=output)[0]
-
-    def _fix_newlines(self, source: str, output: str, tree: cst.Module) -> str:
-        # newlines at the end can get lost so ensure we have one
-        if source[-1] == tree.default_newline and not tree.has_trailing_newline:
-            output += tree.default_newline
-        return output
 
     def __call__(self, source: str) -> str:
         if not source:
