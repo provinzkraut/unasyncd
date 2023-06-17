@@ -1488,3 +1488,25 @@ def test_async_comprehension(transformer: TreeTransformer) -> None:
     """
 
     assert transformer(dedent(source)) == dedent(expected)
+
+
+def test_replace_relative_imported_names() -> None:
+    transformer = TreeTransformer(
+        extra_name_replacements={".foo.AsyncThing": ".bar.SyncThing"}
+    )
+    source = """
+    from .foo import AsyncThing
+
+    async def func() -> AsyncThing:
+        ...
+    """
+
+    expected = """
+    from .foo import AsyncThing
+    from .bar import SyncThing
+
+    def func() -> SyncThing:
+        ...
+    """
+
+    assert transformer(dedent(source)) == dedent(expected)

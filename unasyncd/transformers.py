@@ -90,6 +90,7 @@ def _create_name_or_attr(qualified_name: str) -> cst.Attribute | cst.Name:
     """Create a name or attribute from a fully qualified name"""
     if "." in qualified_name:
         attributes, qualified_name = qualified_name.rsplit(".", 1)
+        # if attributes:
         return cst.Attribute(
             attr=cst.Name(value=qualified_name), value=_create_name_or_attr(attributes)
         )
@@ -142,9 +143,15 @@ def _get_full_name_for_import_from(node: cst.ImportFrom) -> str:
 
 
 def _create_import_from(module_name: str, names: Iterable[str]) -> cst.ImportFrom:
+    relative: list[cst.Dot] = []
+    if "." in module_name:
+        orig_len = len(module_name)
+        module_name = module_name.lstrip(".")
+        relative = [cst.Dot() for _ in range(orig_len - len(module_name))]
     return cst.ImportFrom(
         module=_create_name_or_attr(module_name),
         names=[cst.ImportAlias(cst.Name(name)) for name in names],
+        relative=relative,
     )
 
 
