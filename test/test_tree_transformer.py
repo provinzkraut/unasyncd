@@ -2,6 +2,7 @@ from textwrap import dedent
 
 import libcst as cst
 import pytest
+import tomli_w
 
 from unasyncd.transformers import TreeTransformer
 
@@ -1081,6 +1082,8 @@ def test_unwrap_awaitable_annotation(transformer: TreeTransformer) -> None:
     """
 
     expected = """
+    from typing import Awaitable
+
     def foo() -> None:
         pass
     """
@@ -1449,3 +1452,21 @@ def test_preserve_import_formatting(transformer: TreeTransformer) -> None:
     """
 
     assert transformer(dedent(source)) == dedent(source)
+
+
+def test_ruff_fix(tmp_path, monkeypatch) -> None:
+    config_file = tmp_path / "ruff.toml"
+    config_file.write_text(tomli_w.dumps({"select": ["I001"]}))
+    monkeypatch.chdir(tmp_path)
+    transformer = TreeTransformer(ruff_fix=True)
+
+    source = """
+    import time, asyncio
+    """
+
+    expected = """
+    import asyncio
+    import time
+    """
+
+    assert transformer(dedent(source)) == dedent(expected)

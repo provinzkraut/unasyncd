@@ -146,6 +146,7 @@ def test_feature_flags(
                 "infer-type-checking-imports",
                 "force",
                 "cache",
+                "ruff-fix",
             ]
         ]
     )

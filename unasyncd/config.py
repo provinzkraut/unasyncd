@@ -18,6 +18,7 @@ class Config(msgspec.Struct):
     force_regen: bool
     check_only: bool
     infer_type_checking_imports: bool
+    ruff_fix: bool
 
     def key(self) -> str:
         return hashlib.sha1(msgspec.json.encode(self)).hexdigest()
@@ -74,4 +75,5 @@ def load_config(path: Path | None, **defaults: Any) -> Config:
         check_only=raw_config.get("check_only", False),
         force_regen=raw_config.get("force_regen", False),
         infer_type_checking_imports=raw_config.get("infer_type_checking_imports", True),
+        ruff_fix=raw_config.get("ruff_fix", False),
     )
