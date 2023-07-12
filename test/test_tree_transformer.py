@@ -1510,3 +1510,29 @@ def test_replace_relative_imported_names() -> None:
     """
 
     assert transformer(dedent(source)) == dedent(expected)
+
+
+def test_module_dunder_all_import():
+    transformer = TreeTransformer(
+        extra_name_replacements={
+            ".foo.AsyncThing": ".foo.SyncThing",
+            "bar.Something": "baz.SomethingElse",
+        }
+    )
+
+    source = """
+    from .foo import AsyncThing
+    from bar import Something
+
+    __all__ = ("AsyncThing", "Something")
+    """
+
+    expected = """
+    from .foo import AsyncThing, SyncThing
+    from bar import Something
+    from baz import SomethingElse
+
+    __all__ = ("SyncThing", "SomethingElse")
+    """
+
+    assert transformer(dedent(source)) == dedent(expected)
