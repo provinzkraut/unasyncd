@@ -7,7 +7,7 @@ import subprocess
 import sys
 from collections import defaultdict
 from collections.abc import Iterable, Sequence
-from typing import Any, Callable, TypeVar, Union
+from typing import Any, Callable, TypeVar, Union, cast
 
 import libcst as cst
 import libcst.matchers as m
@@ -136,9 +136,10 @@ def _get_docstring_node(
 
 def _get_full_name_for_import_from(node: cst.ImportFrom) -> str:
     return (
-        cst.helpers.get_full_name_for_node_or_raise(node.module)
+        "." * len(node.relative)
+        + cst.helpers.get_full_name_for_node_or_raise(node.module)
         if node.module
-        else "." * len(node.relative)
+        else ""
     )
 
 
@@ -430,9 +431,9 @@ class _AsyncTransformer(_ReplaceNamesMixin, cst.CSTTransformer):
         )
 
         self._expressions_to_remove: set[cst.Expr] = set()
-        self._string_transformer = StringTransformer()
+        self._string_transformer = StringTransformer(self._name_replacements)
 
-        self._current_scop_name: tuple[str, ...] = tuple()
+        self._current_scope_name: tuple[str, ...] = tuple()
         self._scope_nodes: list[cst.CSTNode] = []
 
         self._if_type_checking_node: cst.If | None = None
@@ -476,7 +477,7 @@ class _AsyncTransformer(_ReplaceNamesMixin, cst.CSTTransformer):
 
     @property
     def _should_transform_current_node(self) -> bool:
-        return self._current_scop_name not in self.meta.exclude
+        return self._current_scope_name not in self.meta.exclude
 
     def get_qualified_name(self, node: cst.CSTNode) -> str | None:
         """Get the fully qualified name of ``node``, relative to the current module."""
@@ -505,7 +506,7 @@ class _AsyncTransformer(_ReplaceNamesMixin, cst.CSTTransformer):
         return True
 
     def visit_ClassDef(self, node: cst.ClassDef) -> bool | None:
-        self._current_scop_name = (*self._current_scop_name, node.name.value)
+        self._current_scope_name = (*self._current_scope_name, node.name.value)
         self._scope_nodes.append(node)
         return self._should_transform_current_node
 
@@ -514,14 +515,14 @@ class _AsyncTransformer(_ReplaceNamesMixin, cst.CSTTransformer):
     ) -> (
         cst.BaseStatement | cst.FlattenSentinel[cst.BaseStatement] | cst.RemovalSentinel
     ):
-        self._current_scop_name = self._current_scop_name[:-1]
+        self._current_scope_name = self._current_scope_name[:-1]
         self._scope_nodes = self._scope_nodes[:-1]
         if self._should_transform_docstrings and self._should_transform_current_node:
             updated_node = self._transform_docstring(updated_node)
         return updated_node
 
     def visit_FunctionDef(self, node: cst.FunctionDef) -> bool | None:
-        self._current_scop_name = (*self._current_scop_name, node.name.value)
+        self._current_scope_name = (*self._current_scope_name, node.name.value)
         self._scope_nodes.append(node)
         return self._should_transform_current_node
 
@@ -537,7 +538,7 @@ class _AsyncTransformer(_ReplaceNamesMixin, cst.CSTTransformer):
             if self._should_transform_docstrings:
                 updated_node = self._transform_docstring(updated_node)
 
-        self._current_scop_name = self._current_scop_name[:-1]
+        self._current_scope_name = self._current_scope_name[:-1]
         self._scope_nodes = self._scope_nodes[:-1]
         return updated_node
 
@@ -794,6 +795,68 @@ class _AsyncTransformer(_ReplaceNamesMixin, cst.CSTTransformer):
             slice=[*updated_node.slice, none_element]
         )
         return updated_node
+
+    def leave_Assign(
+        self, original_node: cst.Assign, updated_node: cst.Assign
+    ) -> (
+        cst.BaseSmallStatement
+        | cst.FlattenSentinel[cst.BaseSmallStatement]
+        | cst.RemovalSentinel
+    ):
+        """Handle ``__all__`` and its imports"""
+
+        if not isinstance(self.current_scope_node, cst.Module):
+            return updated_node
+
+        if not m.matches(
+            updated_node, m.Assign(targets=[m.AssignTarget(target=m.Name("__all__"))])
+        ):
+            return updated_node
+
+        imported_names: dict[str, str] = {}
+        for module_name, import_ in self._scoped_node_imports[
+            self.current_scope_node
+        ].from_imports.items():
+            if isinstance(import_.names, cst.ImportStar):
+                continue
+
+            for name in import_.names:
+                full_name = name.evaluated_alias or name.evaluated_name
+                imported_names[
+                    full_name
+                ] = f"{_get_full_name_for_import_from(import_)}.{full_name}"
+
+        elements: list[cst.Element] = updated_node.value.elements  # type: ignore[attr-defined]
+        updated_elements: list[cst.Element] = []
+        for element in elements:
+            if not isinstance(element.value, cst.SimpleString):
+                continue
+
+            value = cast(str, element.value.evaluated_value)
+            if not (qualified_name := imported_names.get(value)):
+                continue
+
+            if not (replacement := self._name_replacements.get(qualified_name)):
+                continue
+
+            if "." in replacement:
+                module_name, attr = replacement.rsplit(".", 1)
+                self.meta.needs_from_import[module_name].add(attr)
+                replacement = attr
+            else:
+                self.meta.needs_module_import.add(replacement.rsplit(".", 1)[0])
+
+            quote = element.value.quote
+
+            updated_elements.append(
+                element.with_deep_changes(
+                    element.value, value=f"{quote}{replacement}{quote}"
+                )
+            )
+
+        return updated_node.with_deep_changes(
+            updated_node.value, elements=updated_elements
+        )
 
     def _find_first_non_import_line(self, updated_node: cst.Module) -> int:
         """Get the index of the first line of the module that is not an import,
