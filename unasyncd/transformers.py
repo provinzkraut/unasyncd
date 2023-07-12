@@ -826,7 +826,7 @@ class _AsyncTransformer(_ReplaceNamesMixin, cst.CSTTransformer):
                     full_name
                 ] = f"{_get_full_name_for_import_from(import_)}.{full_name}"
 
-        elements: list[cst.Element] = updated_node.value.elements  # type: ignore[attr-defined]
+        elements: list[cst.Element] = updated_node.value.elements  # type: ignore[attr-defined]  # noqa: E501
         updated_elements: list[cst.Element] = []
         for element in elements:
             if not isinstance(element.value, cst.SimpleString):
