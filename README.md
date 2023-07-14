@@ -351,6 +351,22 @@ import asyncio
 await asyncio.sleep(0)
 ```
 
+### `anyio.Path`
+
+*Async*
+```python
+import anyio
+
+await anyio.Path().read_bytes()
+```
+
+*Sync*
+```python
+import pathlib
+
+pathlib.Path().read_bytes()
+```
+
 ### Type annotations
 
 |                                   |                                    |

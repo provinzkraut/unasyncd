@@ -38,6 +38,7 @@ NAME_REPLACEMENTS = {
     "typing.AsyncGenerator": "typing.Generator",
     "asyncio.sleep": "time.sleep",
     "anyio.sleep": "time.sleep",
+    "anyio.Path": "pathlib.Path",
 }
 
 
