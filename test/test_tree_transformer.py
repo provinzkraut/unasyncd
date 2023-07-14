@@ -1536,3 +1536,37 @@ def test_module_dunder_all_import():
     """
 
     assert transformer(dedent(source)) == dedent(expected)
+
+
+def test_anyio_path(transformer):
+    source = """
+    from anyio import Path
+
+    foo = await Path().read_text()
+    """
+
+    expected = """
+    from anyio import Path
+    from pathlib import Path
+
+    foo = Path().read_text()
+    """
+
+    assert transformer(dedent(source)) == dedent(expected)
+
+
+def test_anyio_path_module_import(transformer):
+    source = """
+    import anyio
+
+    foo = await anyio.Path().read_text()
+    """
+
+    expected = """
+    import anyio
+    import pathlib
+
+    foo = pathlib.Path().read_text()
+    """
+
+    assert transformer(dedent(source)) == dedent(expected)
