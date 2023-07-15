@@ -48,7 +48,7 @@ async def _run(*, config: Config, check_only: bool, verbose: bool) -> bool:
     return files_changed > 0
 
 
-@click.command()  # type: ignore[arg-type]
+@click.command()
 @click.option(
     "--cache/--no-cache",
     is_flag=True,
