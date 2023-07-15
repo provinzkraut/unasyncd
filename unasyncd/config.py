@@ -7,6 +7,8 @@ from typing import Any
 
 import msgspec
 
+from ._version import VERSION
+
 
 class Config(msgspec.Struct):
     add_editors_note: bool
@@ -21,7 +23,7 @@ class Config(msgspec.Struct):
     ruff_fix: bool
 
     def key(self) -> str:
-        return hashlib.sha1(msgspec.json.encode(self)).hexdigest()
+        return hashlib.sha1(msgspec.json.encode(self) + VERSION.encode()).hexdigest()
 
 
 def _collect_paths(file_names: dict[str, str]) -> dict[str, str]:

@@ -122,3 +122,14 @@ def test_config_key(config_from_file):
     old_key = config.key()
     config.force_regen = True
     assert config.key() != old_key
+
+
+def test_config_key_changes_with_version(config_from_file, monkeypatch):
+    config = config_from_file()
+    old_key = config.key()
+
+    import unasyncd.config
+
+    monkeypatch.setattr(unasyncd.config, "VERSION", "99.0.0")
+
+    assert old_key != config.key()
