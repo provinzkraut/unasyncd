@@ -1,4 +1,4 @@
-# Unasync
+# Unasyncd
 
 A tool to transform asynchronous Python code to synchronous Python code.
 
@@ -46,7 +46,7 @@ Unasyncd features:
 ## Table of contents
 
 <!-- TOC -->
-* [Unasync](#unasync)
+* [Unasyncd](#unasyncd)
   * [Why?](#why)
   * [Why unasyncd?](#why-unasyncd)
   * [Table of contents](#table-of-contents)
@@ -60,6 +60,7 @@ Unasyncd features:
     * [`asyncio.TaskGroup`](#asynciotaskgroup)
     * [`anyio.create_task_group`](#anyiocreatetaskgroup)
     * [`asyncio.sleep` / `anyio.sleep`](#asynciosleep--anyiosleep)
+    * [`anyio.Path`](#anyiopath)
     * [Type annotations](#type-annotations)
     * [Docstrings](#docstrings)
   * [Usage](#usage)
