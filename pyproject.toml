@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "unasyncd"
-version = "0.6.0"
+version = "0.6.1"
 description = "A tool to transform asynchronous Python code to synchronous Python code."
 authors = ["Janek Nouvertné <j.a.nouvertne@posteo.de>"]
 license = "MIT"
@@ -9,8 +9,8 @@ readme = "README.md"
 [tool.poetry.dependencies]
 python = "^3.9"
 libcst = "^1.0.0"
-click = "^8.1.3"
-rich = "^13.4.1"
+click = "^8.1.7"
+rich = "^13.5.2"
 anyio = "^3.7.0"
 msgspec = "^0.17.0"
 tomli-w = "^1.0.0"
