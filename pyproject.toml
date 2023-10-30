@@ -44,7 +44,7 @@ select = [
     "TCH", # flake8-type-checking
     "UP",  # pyupgrade
 ]
-target-version = "py39"
+target-version = "py38"
 
 [tool.mypy]
 strict = true

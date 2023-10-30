@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import time
+from contextlib import nullcontext
 from pathlib import Path
 
 import rich
@@ -20,22 +21,18 @@ async def _run(*, config: Config, check_only: bool, verbose: bool) -> bool:
     files_changed = 0
     files_unchanged = 0
 
-    status = console.status("Processing")
-    if not verbose:
-        status.start()
+    status = console.status("Processing") if not verbose else nullcontext()
+    with status:  # type: ignore[attr-defined]
+        async for result in unasync_files(config=config):
+            if not result.transformed:
+                files_unchanged += 1
+                continue
 
-    async for result in unasync_files(config=config):
-        if not result.transformed:
-            files_unchanged += 1
-            continue
+            files_changed += 1
 
-        files_changed += 1
-
-        verbose_console.print(
-            f"Transformed [yellow]{result.source}[/] > [green]{result.target}[/]"
-        )
-
-    status.stop()
+            verbose_console.print(
+                f"Transformed [yellow]{result.source}[/] > [green]{result.target}[/]"
+            )
 
     console.print(f"Finished in {round(time.perf_counter() - start, 2)} seconds")
     console.print(

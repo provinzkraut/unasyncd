@@ -7,7 +7,7 @@ import shutil
 import textwrap
 from concurrent.futures import ProcessPoolExecutor
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Dict
 
 import anyio
 import anyio.to_process
@@ -226,7 +226,7 @@ class Env:
         """
         if self._meta is None:
             if meta_raw := await self.cache.get("meta.json"):
-                self._meta = msgspec.json.decode(meta_raw, type=dict[str, FileMeta])
+                self._meta = msgspec.json.decode(meta_raw, type=Dict[str, FileMeta])
             else:
                 self._meta = {}
 
