@@ -16,15 +16,94 @@ import msgspec.json
 from anyio import Path
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator
+    from collections.abc import AsyncGenerator, Iterator
 
     from .config import Config
 
 
 def _hash_ast(source: str) -> str:
     return hashlib.sha1(
-        ast.unparse(ast.parse(source, type_comments=True)).encode("utf-8")
+        "".join(_stringify_ast(ast.parse(source, type_comments=True))).encode("utf-8")
     ).hexdigest()
+
+
+def _normalize(lineend: str, value: str) -> str:
+    # To normalize, we strip any leading and trailing space from
+    # each line...
+    stripped = [i.strip() for i in value.splitlines()]
+    normalized = lineend.join(stripped)
+    # ...and remove any blank lines at the beginning and end of
+    # the whole string
+    return normalized.strip()
+
+
+def _stringify_ast(node: ast.AST, depth: int = 0) -> Iterator[str]:
+    # this was taken from black
+    # https://github.com/psf/black/blob/ddfecf06c13dd86205c851e340124e325ed82c5c/src/black/parsing.py#L143-L216
+    # and serves as a workaround for generating a hash of an AST, because ast.unparse
+    # is not available until Python 3.9
+    """Simple visitor generating strings to compare ASTs by content."""
+
+    if (
+        isinstance(node, ast.Constant)
+        and isinstance(node.value, str)
+        and node.kind == "u"
+    ):
+        # It's a quirk of history that we strip the u prefix over here. We used to
+        # rewrite the AST nodes for Python version compatibility and we never copied
+        # over the kind
+        node.kind = None
+
+    yield f"{'  ' * depth}{node.__class__.__name__}("
+
+    for field in sorted(node._fields):
+        # TypeIgnore has only one field 'lineno' which breaks this comparison
+        if isinstance(node, ast.TypeIgnore):
+            break
+
+        try:
+            value = getattr(node, field)
+        except AttributeError:
+            continue
+
+        yield f"{'  ' * (depth+1)}{field}="
+
+        if isinstance(value, list):
+            for item in value:
+                # Ignore nested tuples within del statements, because we may insert
+                # parentheses and they change the AST.
+                if (
+                    field == "targets"
+                    and isinstance(node, ast.Delete)
+                    and isinstance(item, ast.Tuple)
+                ):
+                    for elt in item.elts:
+                        yield from _stringify_ast(elt, depth + 2)
+
+                elif isinstance(item, ast.AST):
+                    yield from _stringify_ast(item, depth + 2)
+
+        elif isinstance(value, ast.AST):
+            yield from _stringify_ast(value, depth + 2)
+
+        else:
+            if (
+                isinstance(node, ast.Constant)
+                and field == "value"
+                and isinstance(value, str)
+            ):
+                # Constant strings may be indented across newlines, if they are
+                # docstrings; fold spaces after newlines when comparing. Similarly,
+                # trailing and leading space may be removed.
+                normalized = _normalize("\n", value)
+            elif field == "type_comment" and isinstance(value, str):
+                # Trailing whitespace in type comments is removed.
+                normalized = value.rstrip()
+            else:
+                normalized = value
+            yield f"{'  ' * (depth+2)}{normalized!r},  # {value.__class__.__name__}"
+
+    yield f"{'  ' * depth})  # /{node.__class__.__name__}"
 
 
 @dataclass

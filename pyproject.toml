@@ -7,12 +7,12 @@ license = "MIT"
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.9"
+python = "^3.8"
 libcst = "^1.0.0"
 click = "^8.1.7"
-rich = "^13.5.2"
-anyio = "^3.7.0"
-msgspec = "^0.17.0"
+rich = "^13.6.0"
+anyio = "^4.0.0"
+msgspec = "^0.18.4"
 tomli-w = "^1.0.0"
 rich-click = "^1.6.1"
 ruff = {version = "*", optional = true}
