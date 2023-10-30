@@ -406,12 +406,12 @@ def test_transform_source_and_target_changed_no_transformation(
     runner: CliRunner, source_file: Path, target_file: Path, mock_transform: MagicMock
 ) -> None:
     args = [f"{source_file}:{target_file}"]
-    result_1 = runner.invoke(main, args)
+    result_1 = runner.invoke(main, args, catch_exceptions=False)
 
     target_file.write_text(TEST_TRANSFORMED_CONTENT + "\n\nimport foo")
     source_file.write_text(TEST_CONTENT + "\n\nimport foo")
 
-    result_2 = runner.invoke(main, args)
+    result_2 = runner.invoke(main, args, catch_exceptions=False)
 
     assert result_1.exit_code == 1
     assert result_2.exit_code == 0
@@ -421,7 +421,11 @@ def test_transform_source_and_target_changed_no_transformation(
 def test_transform_add_editors_note(
     runner: CliRunner, source_file: Path, target_file: Path
 ) -> None:
-    result = runner.invoke(main, [f"{source_file}:{target_file}", "--add-editors-note"])
+    result = runner.invoke(
+        main,
+        [f"{source_file}:{target_file}", "--add-editors-note"],
+        catch_exceptions=False,
+    )
 
     assert result.exit_code == 1
     expected_content = (
