@@ -674,7 +674,7 @@ class _AsyncTransformer(_ReplaceNamesMixin, cst.CSTTransformer):
         ):
             return updated_node
 
-        item_call_func: cst.Attribute | cst.Name = with_item.item.func  # type: ignore[attr-defined]  # noqa: E501
+        item_call_func: cst.Attribute | cst.Name = with_item.item.func  # type: ignore[attr-defined]
 
         if not (scope := self.get_metadata(ScopeProvider, original_node)):
             raise RuntimeError("Scope not found")
@@ -823,11 +823,11 @@ class _AsyncTransformer(_ReplaceNamesMixin, cst.CSTTransformer):
 
             for name in import_.names:
                 full_name = name.evaluated_alias or name.evaluated_name
-                imported_names[
-                    full_name
-                ] = f"{_get_full_name_for_import_from(import_)}.{full_name}"
+                imported_names[full_name] = (
+                    f"{_get_full_name_for_import_from(import_)}.{full_name}"
+                )
 
-        elements: list[cst.Element] = updated_node.value.elements  # type: ignore[attr-defined]  # noqa: E501
+        elements: list[cst.Element] = updated_node.value.elements  # type: ignore[attr-defined]
         updated_elements: list[cst.Element] = []
         for element in elements:
             if not isinstance(element.value, cst.SimpleString):
