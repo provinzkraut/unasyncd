@@ -36,7 +36,7 @@ unasyncd = "unasyncd.cli:main"
 
 
 [tool.ruff]
-select = [
+lint.select = [
     "E",  # pycodestyle
     "F",  # pyflakes
     "ERA", # eradicate
