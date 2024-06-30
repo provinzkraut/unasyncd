@@ -5,6 +5,7 @@ from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
+import tomli_w
 from click.testing import CliRunner
 from pytest import MonkeyPatch
 from pytest_mock import MockerFixture
@@ -433,3 +434,31 @@ def test_transform_add_editors_note(
         f"from\n# {source_file}\n{TEST_TRANSFORMED_CONTENT}"
     )
     assert target_file.read_text() == expected_content
+
+
+def test_ruff_fix_pass_file_name(tmp_path, monkeypatch, runner: CliRunner) -> None:
+    source_file = tmp_path / "some_file.py"
+    target_file = tmp_path / "some_other_file.py"
+    config_file = tmp_path / "ruff.toml"
+    config_file.write_text(
+        tomli_w.dumps(
+            {"select": ["I001"], "per-file-ignores": {"some_file.py": ["I001"]}}
+        )
+    )
+    monkeypatch.chdir(tmp_path)
+
+    source = """
+    import time, asyncio
+    """
+    source_file.write_text(textwrap.dedent(source))
+
+    expected = """
+    import time, asyncio
+    """
+
+    runner.invoke(
+        main,
+        [f"{source_file}:{target_file}", "--ruff-fix"],
+        catch_exceptions=False,
+    )
+    assert target_file.read_text() == textwrap.dedent(expected)

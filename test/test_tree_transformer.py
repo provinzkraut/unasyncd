@@ -1486,6 +1486,27 @@ def test_ruff_fix_ruff_error_raises(tmp_path, monkeypatch) -> None:
         transformer(dedent(source))
 
 
+def test_ruff_fix_pass_file_name(tmp_path, monkeypatch) -> None:
+    config_file = tmp_path / "ruff.toml"
+    config_file.write_text(
+        tomli_w.dumps(
+            {"select": ["I001"], "per-file-ignores": {"some_file.py": ["I001"]}}
+        )
+    )
+    monkeypatch.chdir(tmp_path)
+    transformer = TreeTransformer(ruff_fix=True, file_name="some_file.py")
+
+    source = """
+    import time, asyncio
+    """
+
+    expected = """
+    import time, asyncio
+    """
+
+    assert transformer(dedent(source)) == dedent(expected)
+
+
 def test_async_comprehension(transformer: TreeTransformer) -> None:
     source = """
     [x async for x in foo()]

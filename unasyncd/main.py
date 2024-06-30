@@ -258,6 +258,7 @@ class Env:
             extra_name_replacements=self.config.extra_replacements.get(str(file), {}),
             infer_type_checking_imports=self.config.infer_type_checking_imports,
             ruff_fix=self.config.ruff_fix,
+            file_name=str(file),
         )
 
         content = await file.get_content()
