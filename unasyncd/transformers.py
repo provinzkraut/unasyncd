@@ -167,6 +167,7 @@ class TreeTransformer:
         extra_name_replacements: dict[str, str] | None = None,
         infer_type_checking_imports: bool = True,
         ruff_fix: bool = False,
+        file_name: str | None = None,
     ) -> None:
         self.exclude = exclude
         self.transform_docstrings = transform_docstrings
@@ -176,21 +177,27 @@ class TreeTransformer:
         }
         self.infer_type_checking_imports = infer_type_checking_imports
         self._post_transforms: list[Callable[[str, str, cst.Module], str]] = []
+        self._file_name = file_name
         if ruff_fix:
             self._post_transforms.append(self._run_ruff)
 
     def _run_ruff(self, source: str, output: str, tree: cst.Module) -> str:
+        args = [
+            sys.executable,
+            "-m",
+            "ruff",
+            "check",
+            "--no-cache",
+            "--fix",
+            "--fix-only",
+            "--quiet",
+        ]
+
+        if self._file_name:
+            args.append(f"--stdin-filename={self._file_name}")
+
         with subprocess.Popen(
-            [
-                sys.executable,
-                "-m",
-                "ruff",
-                "check",
-                "--no-cache",
-                "--fix",
-                "--quiet",
-                "-",
-            ],
+            [*args, "-"],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             stdin=subprocess.PIPE,
