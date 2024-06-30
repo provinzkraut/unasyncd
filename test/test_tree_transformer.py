@@ -1476,7 +1476,6 @@ def test_ruff_fix_ruff_error_raises(tmp_path, monkeypatch) -> None:
     config_file = tmp_path / "ruff.toml"
     monkeypatch.chdir(tmp_path)
     config_file.write_text(tomli_w.dumps({"select": ["FOO017"]}))
-    monkeypatch.chdir(tmp_path)
     transformer = TreeTransformer(ruff_fix=True)
 
     source = """
