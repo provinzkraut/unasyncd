@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "unasyncd"
-version = "0.7.1"
+version = "0.7.2"
 description = "A tool to transform asynchronous Python code to synchronous Python code."
 authors = ["Janek Nouvertné <j.a.nouvertne@posteo.de>"]
 license = "MIT"
@@ -8,7 +8,7 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.8"
-libcst = "^1.0.0"
+libcst = ">=1.0.0,<2"
 click = "^8.1.7"
 rich = "^13.6.0"
 anyio = "^4.0.0"
@@ -17,7 +17,7 @@ tomli = {version = "^2.0.1", python = "<3.11"}
 tomli-w = "^1.0.0"
 rich-click = "^1.6.1"
 ruff = {version = "*", optional = true}
-importlib-metadata = { version = "^6.8.0", python = "<3.10" }
+importlib-metadata = { version = "^8.0.0", python = "<3.10" }
 
 
 [tool.poetry.extras]
