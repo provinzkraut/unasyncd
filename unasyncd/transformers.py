@@ -185,6 +185,7 @@ class TreeTransformer:
                 sys.executable,
                 "-m",
                 "ruff",
+                "check",
                 "--no-cache",
                 "--fix",
                 "--quiet",
@@ -195,7 +196,10 @@ class TreeTransformer:
             stdin=subprocess.PIPE,
             encoding="utf-8",
         ) as process:
-            return process.communicate(input=output)[0]
+            stdout, stderr = process.communicate(input=output)
+            if process.returncode != 0:
+                raise ChildProcessError(f"Error calling ruff: {stderr}")
+            return stdout
 
     def __call__(self, source: str) -> str:
         if not source:
