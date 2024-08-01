@@ -184,14 +184,8 @@ class TreeTransformer:
         if ruff_format:
             self._post_transforms.append(self._ruff_format)
 
-    def _run_ruff(self, source: str, output: str, tree: cst.Module, mode: str) -> str:
-        args = [sys.executable, "-m", "ruff"]
-        if mode == "fix":
-            args.extend(["check", "--no-cache", "--fix", "--fix-only", "--quiet"])
-        elif mode == "format":
-            args.extend(["format", "--no-cache", "--quiet"])
-        else:
-            raise ValueError("Invalid mode.")
+    def _run_ruff(self, source: str, output: str, tree: cst.Module, cmd: list[str]) -> str:
+        args = [sys.executable, "-m", "ruff", *cmd, "--no-cache", "--quiet"]
 
         if self._file_name:
             args.append(f"--stdin-filename={self._file_name}")
