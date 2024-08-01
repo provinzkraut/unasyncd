@@ -450,6 +450,7 @@ file or the command line interface.
 | `cache`                       | bool  | true    | Cache transformation results                                                       |
 | `force_regen`                 | bool  | false   | Always regenerate files, regardless if their content has changed                   |
 | `ruff_fix`                    | bool  | false   | Run `ruff --fix` on the generated code                                             |
+| `ruff_format`                 | bool  | false   | Run `ruff format` on the generated code                                            |
 
 **Example**
 
@@ -483,6 +484,8 @@ configuration file values*
 | `--no-add-editors-note`            | Inverse of `--add-editors-note`                                     |
 | `--ruff-fix`                       | Run `ruff --fix` on the generated code                              |
 | `--no-ruff-fix`                    | Inverse of `--ruff-fix`                                             |
+| `--ruff-format`                    | Run `ruff format` on the generated code                             |
+| `--no-ruff-format`                 | Inverse of `--ruff-format`                                          |
 | `--force`                          | Always regenerate files, regardless if their content has changed    |
 | `--no-force`                       | Inverse of `--force`                                                |
 | `--check`                          | Don't write changes back to files                                   |
@@ -557,7 +560,7 @@ isort or black. It follows a few basic rules:
 
 Unasyncd will not remove imports that have become unused as a result of the applied
 transformations. This is because tracking of usages is a complex task and best left to
-tools made specifically for this job like [ruff](https://beta.ruff.rs/docs) or
+tools made specifically for this job like [ruff](https://docs.astral.sh/ruff/) or
 [autoflake](https://github.com/PyCQA/autoflake).
 
 
@@ -570,16 +573,16 @@ result of the transformation applied by unasyncd -, in turn causing unasyncd to
 regenerate the file the next time it is invoked, since the target file is no longer
 AST-equivalent to what unasyncd thinks it should be.
 
-To alleviate this, unasyncd offers a [ruff](https://beta.ruff.rs/docs) integration,
-which can automatically run `ruff --fix` on the generated code before writing it back.
+To alleviate this, unasyncd offers a [ruff](https://docs.astral.sh/ruff/) integration,
+which can automatically run `ruff --fix` and/or `ruff format` on the generated code before writing it back.
 It will use the existing ruff configuration for this to ensure the fixes applied to
 adhere to the rules used throughout the project.
 
 If this option is used, the transformed code will never be altered by ruff, therefore
 breaking the cycle.
 
-This option can be enabled with the `ruff_fix = true` feature flag, or by using the
-`--ruff-fix` CLI flag.
+This option can be enabled with the `ruff_fix = true` and/or `ruff_format = true` feature flag, or by using the
+`--ruff-fix` and/or `--ruff-format` CLI flag.
 
 Usage of this option requires an installation of `ruff`. If not independently installed,
 it can be installed as an extra of unasyncd: `pip install unasyncd[ruff]`.

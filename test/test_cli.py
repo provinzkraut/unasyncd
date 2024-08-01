@@ -442,7 +442,12 @@ def test_ruff_fix_pass_file_name(tmp_path, monkeypatch, runner: CliRunner) -> No
     config_file = tmp_path / "ruff.toml"
     config_file.write_text(
         tomli_w.dumps(
-            {"select": ["I001"], "per-file-ignores": {"some_file.py": ["I001"]}}
+            {
+                "lint": {
+                    "per-file-ignores": {"some_file.py": ["I001"]},
+                    "select": ["I001"],
+                }
+            }
         )
     )
     monkeypatch.chdir(tmp_path)
