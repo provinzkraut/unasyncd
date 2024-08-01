@@ -203,11 +203,10 @@ class TreeTransformer:
             return stdout
 
     def _ruff_fix(self, source: str, output: str, tree: cst.Module) -> str:
-        return self._run_ruff(source, output, tree, mode="fix")
+        return self._run_ruff(source, output, tree, cmd=["check", "--fix", "--fix-only"])
 
     def _ruff_format(self, source: str, output: str, tree: cst.Module) -> str:
-        return self._run_ruff(source, output, tree, mode="format")
-
+        return self._run_ruff(source, output, tree, cmd=["format"])
     def __call__(self, source: str) -> str:
         if not source:
             return ""
