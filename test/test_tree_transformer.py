@@ -1527,12 +1527,10 @@ def test_ruff_format(tmp_path, monkeypatch) -> None:
     monkeypatch.chdir(tmp_path)
     transformer = TreeTransformer(ruff_format=True)
 
-    source = """
-    mode = "format"
+    source = """mode = "format"
     """
 
-    expected = """
-    mode = 'format'
+    expected = """mode = 'format'
     """
 
     assert transformer(dedent(source)) == dedent(expected)
