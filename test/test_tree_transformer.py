@@ -291,6 +291,20 @@ def test_async_generator(transformer: TreeTransformer) -> None:
     assert transformer(dedent(source)) == dedent(expected)
 
 
+def test_async_generator_collections_abc(transformer: TreeTransformer) -> None:
+    source = """
+    from collections.abc import AsyncGenerator
+    x: AsyncGenerator
+    """
+
+    expected = """
+    from collections.abc import AsyncGenerator, Generator
+    x: Generator
+    """
+
+    assert transformer(dedent(source)) == dedent(expected)
+
+
 def test_async_generator_annotation(transformer: TreeTransformer) -> None:
     source = """
     from typing import AsyncGenerator
@@ -299,6 +313,22 @@ def test_async_generator_annotation(transformer: TreeTransformer) -> None:
 
     expected = """
     from typing import AsyncGenerator, Generator
+    x: Generator[str, int, None]
+    """
+
+    assert transformer(dedent(source)) == dedent(expected)
+
+
+def test_async_generator_annotation_collections_abc(
+    transformer: TreeTransformer,
+) -> None:
+    source = """
+    from collections.abc import AsyncGenerator
+    x: AsyncGenerator[str, int]
+    """
+
+    expected = """
+    from collections.abc import AsyncGenerator, Generator
     x: Generator[str, int, None]
     """
 
@@ -339,6 +369,24 @@ def test_async_generator_class(transformer: TreeTransformer) -> None:
     assert transformer(dedent(source)) == dedent(expected)
 
 
+def test_async_generator_class_collections_abc(transformer: TreeTransformer) -> None:
+    source = """
+    from collections.abc import AsyncGenerator
+
+    class Foo(AsyncGenerator[str, int]):
+        pass
+    """
+
+    expected = """
+    from collections.abc import AsyncGenerator, Generator
+
+    class Foo(Generator[str, int, None]):
+        pass
+    """
+
+    assert transformer(dedent(source)) == dedent(expected)
+
+
 def test_async_generator_class_typing_module_import(
     transformer: TreeTransformer,
 ) -> None:
@@ -359,6 +407,26 @@ def test_async_generator_class_typing_module_import(
     assert transformer(dedent(source)) == dedent(expected)
 
 
+def test_async_generator_class_collections_abc_module_import(
+    transformer: TreeTransformer,
+) -> None:
+    source = """
+    import collections.abc
+
+    class Foo(collections.abc.AsyncGenerator[str, int]):
+        pass
+    """
+
+    expected = """
+    import collections.abc
+
+    class Foo(collections.abc.Generator[str, int, None]):
+        pass
+    """
+
+    assert transformer(dedent(source)) == dedent(expected)
+
+
 def test_async_iterable_annotation(transformer: TreeTransformer) -> None:
     source = """
     from typing import AsyncIterable
@@ -367,6 +435,22 @@ def test_async_iterable_annotation(transformer: TreeTransformer) -> None:
 
     expected = """
     from typing import AsyncIterable, Iterable
+    x: Iterable[str, int]
+    """
+
+    assert transformer(dedent(source)) == dedent(expected)
+
+
+def test_async_iterable_annotation_collections_abc(
+    transformer: TreeTransformer,
+) -> None:
+    source = """
+    from collections.abc import AsyncIterable
+    x: AsyncIterable[str, int]
+    """
+
+    expected = """
+    from collections.abc import AsyncIterable, Iterable
     x: Iterable[str, int]
     """
 
@@ -389,6 +473,22 @@ def test_async_iterable_annotation_typing_module_import(
     assert transformer(dedent(source)) == dedent(expected)
 
 
+def test_async_iterable_annotation_collections_abc_module_import(
+    transformer: TreeTransformer,
+) -> None:
+    source = """
+    import collections.abc
+    x: collections.abc.AsyncIterable[str, int]
+    """
+
+    expected = """
+    import collections.abc
+    x: collections.abc.Iterable[str, int]
+    """
+
+    assert transformer(dedent(source)) == dedent(expected)
+
+
 def test_async_iterable_class(transformer: TreeTransformer) -> None:
     source = """
     from typing import AsyncIterable
@@ -399,6 +499,24 @@ def test_async_iterable_class(transformer: TreeTransformer) -> None:
 
     expected = """
     from typing import AsyncIterable, Iterable
+
+    class Foo(Iterable[str, int]):
+        pass
+    """
+
+    assert transformer(dedent(source)) == dedent(expected)
+
+
+def test_async_iterable_class_collections_abc(transformer: TreeTransformer) -> None:
+    source = """
+    from collections.abc import AsyncIterable
+
+    class Foo(AsyncIterable[str, int]):
+        pass
+    """
+
+    expected = """
+    from collections.abc import AsyncIterable, Iterable
 
     class Foo(Iterable[str, int]):
         pass
@@ -421,6 +539,26 @@ def test_async_iterable_class_typing_module_import(
     import typing
 
     class Foo(typing.Iterable[str, int]):
+        pass
+    """
+
+    assert transformer(dedent(source)) == dedent(expected)
+
+
+def test_async_iterable_class_collections_abc_module_import(
+    transformer: TreeTransformer,
+) -> None:
+    source = """
+    import collections.abc
+
+    class Foo(collections.abc.AsyncIterable[str, int]):
+        pass
+    """
+
+    expected = """
+    import collections.abc
+
+    class Foo(collections.abc.Iterable[str, int]):
         pass
     """
 
@@ -1075,6 +1213,8 @@ def test_unused_name_not_replaced() -> None:
 def test_unwrap_awaitable_annotation(transformer: TreeTransformer) -> None:
     source = """
     from typing import Awaitable, Callable
+    from collections import abc
+
 
     async def foo() -> Awaitable[None]:
         pass
@@ -1082,16 +1222,24 @@ def test_unwrap_awaitable_annotation(transformer: TreeTransformer) -> None:
     async def bar(fn: Callable[[], Awaitable[int]]) -> None:
         pass
 
+    async def baz() -> abc.Awaitable[None]:
+        pass
+
     aw: Awaitable[list[dict[str, int]]]
     """
 
     expected = """
     from typing import Awaitable, Callable
+    from collections import abc
+
 
     def foo() -> None:
         pass
 
     def bar(fn: Callable[[], int]) -> None:
+        pass
+
+    def baz() -> None:
         pass
 
     aw: list[dict[str, int]]

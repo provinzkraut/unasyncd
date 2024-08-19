@@ -370,12 +370,16 @@ pathlib.Path().read_bytes()
 
 ### Type annotations
 
-|                                   |                                    |
-|-----------------------------------|------------------------------------|
-| `typing.AsyncIterable[int]`       | `typing.Iterable[int]`             |
-| `typing.AsyncIterator[int]`       | `typing.Iterator[int]`             |
-| `typing.AsyncGenerator[int, str]` | `typing.Generator[int, str, None]` |
-| `typing.Awaitable[str]`           | `str`                              |
+|                                            |                                             |
+|--------------------------------------------|---------------------------------------------|
+| `typing.AsyncIterable[int]`                | `typing.Iterable[int]`                      |
+| `collections.abc.AsyncIterable[int]`       | `collections.abc.Iterable[int]`             |
+| `typing.AsyncIterator[int]`                | `typing.Iterator[int]`                      |
+| `collections.abc.AsyncIterator[int]`       | `collections.abc.Iterator[int]`             |
+| `typing.AsyncGenerator[int, str]`          | `typing.Generator[int, str, None]`          |
+| `collections.abc.AsyncGenerator[int, str]` | `collections.abc.Generator[int, str, None]` |
+| `typing.Awaitable[str]`                    | `str`                                       |
+| `collections.abc.Awaitable[str]`           | `str`                                       |
 
 
 ### Docstrings
