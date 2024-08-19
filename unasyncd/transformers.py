@@ -34,8 +34,11 @@ NAME_REPLACEMENTS = {
     "StopAsyncIteration": "StopIteration",
     "contextlib.asynccontextmanager": "contextlib.contextmanager",
     "typing.AsyncIterable": "typing.Iterable",
+    "collections.abc.AsyncIterable": "collections.abc.Iterable",
     "typing.AsyncIterator": "typing.Iterator",
+    "collections.abc.AsyncIterator": "collections.abc.Iterator",
     "typing.AsyncGenerator": "typing.Generator",
+    "collections.abc.AsyncGenerator": "collections.abc.Generator",
     "asyncio.sleep": "time.sleep",
     "anyio.sleep": "time.sleep",
     "anyio.Path": "pathlib.Path",
@@ -804,10 +807,13 @@ class _AsyncTransformer(_ReplaceNamesMixin, cst.CSTTransformer):
         ``typing.Generator[None, None, None]``.
         """
         qualified_name = self.get_qualified_name(original_node)
-        if qualified_name == "typing.AsyncGenerator":
+        if qualified_name in (
+            "typing.AsyncGenerator",
+            "collections.abc.AsyncGenerator",
+        ):
             return self._fix_async_generator(updated_node)
 
-        if qualified_name == "typing.Awaitable":
+        if qualified_name in ("typing.Awaitable", "collections.abc.Awaitable"):
             return self._transform_awaitable(updated_node)
 
         return updated_node
