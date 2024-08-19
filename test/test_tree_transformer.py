@@ -1572,7 +1572,7 @@ def test_ruff_fix_and_format(tmp_path, monkeypatch) -> None:
     mode = 'format'
     """
 
-    assert transformer(dedent(source)) == dedent(expected)
+    assert transformer(dedent(source)) == dedent(expected).lstrip()
 
 
 def test_async_comprehension(transformer: TreeTransformer) -> None:
