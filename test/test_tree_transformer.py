@@ -1465,7 +1465,7 @@ def test_preserve_import_formatting(transformer: TreeTransformer) -> None:
 
 def test_ruff_fix(tmp_path, monkeypatch) -> None:
     config_file = tmp_path / "ruff.toml"
-    config_file.write_text(tomli_w.dumps({"select": ["I001"]}))
+    config_file.write_text(tomli_w.dumps({"lint": {"select": ["I001"]}}))
     monkeypatch.chdir(tmp_path)
     transformer = TreeTransformer(ruff_fix=True)
 
@@ -1483,8 +1483,8 @@ def test_ruff_fix(tmp_path, monkeypatch) -> None:
 
 def test_ruff_fix_ruff_error_raises(tmp_path, monkeypatch) -> None:
     config_file = tmp_path / "ruff.toml"
+    config_file.write_text(tomli_w.dumps({"lint": {"select": ["FOO017"]}}))
     monkeypatch.chdir(tmp_path)
-    config_file.write_text(tomli_w.dumps({"select": ["FOO017"]}))
     transformer = TreeTransformer(ruff_fix=True)
 
     source = """
@@ -1499,7 +1499,12 @@ def test_ruff_fix_pass_file_name(tmp_path, monkeypatch) -> None:
     config_file = tmp_path / "ruff.toml"
     config_file.write_text(
         tomli_w.dumps(
-            {"select": ["I001"], "per-file-ignores": {"some_file.py": ["I001"]}}
+            {
+                "lint": {
+                    "per-file-ignores": {"some_file.py": ["I001"]},
+                    "select": ["I001"],
+                }
+            }
         )
     )
     monkeypatch.chdir(tmp_path)
@@ -1514,6 +1519,60 @@ def test_ruff_fix_pass_file_name(tmp_path, monkeypatch) -> None:
     """
 
     assert transformer(dedent(source)) == dedent(expected)
+
+
+def test_ruff_format(tmp_path, monkeypatch) -> None:
+    config_file = tmp_path / "ruff.toml"
+    config_file.write_text(tomli_w.dumps({"format": {"quote-style": "single"}}))
+    monkeypatch.chdir(tmp_path)
+    transformer = TreeTransformer(ruff_format=True)
+
+    source = """mode = "format"
+    """
+
+    expected = """mode = 'format'
+    """
+
+    assert transformer(dedent(source)) == dedent(expected)
+
+
+def test_ruff_format_ruff_error_raises(tmp_path, monkeypatch):
+    config_file = tmp_path / "ruff.toml"
+    config_file.write_text(tomli_w.dumps({"format": {"quote-style": "quadruple"}}))
+    monkeypatch.chdir(tmp_path)
+    transformer = TreeTransformer(ruff_format=True)
+
+    source = """
+    mode = "format"
+    """
+
+    with pytest.raises(ChildProcessError, match="Error calling ruff"):
+        transformer(dedent(source))
+
+
+def test_ruff_fix_and_format(tmp_path, monkeypatch) -> None:
+    config_file = tmp_path / "ruff.toml"
+    config_file.write_text(
+        tomli_w.dumps(
+            {"format": {"quote-style": "single"}, "lint": {"select": ["I001"]}}
+        )
+    )
+    monkeypatch.chdir(tmp_path)
+    transformer = TreeTransformer(ruff_fix=True, ruff_format=True)
+
+    source = """
+    import time, asyncio
+    mode = "format"
+    """
+
+    expected = """
+    import asyncio
+    import time
+
+    mode = 'format'
+    """
+
+    assert transformer(dedent(source)) == dedent(expected).lstrip()
 
 
 def test_async_comprehension(transformer: TreeTransformer) -> None:

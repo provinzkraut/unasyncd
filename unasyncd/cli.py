@@ -77,6 +77,12 @@ async def _run(*, config: Config, check_only: bool, verbose: bool) -> bool:
     help="Run 'ruff --fix' on the transformed output before writing it back",
 )
 @click.option(
+    "--ruff-format/--no-ruff-format",
+    is_flag=True,
+    default=None,
+    help="Run 'ruff format' on the transformed output before writing it back",
+)
+@click.option(
     "--check/--write",
     "check_only",
     is_flag=True,
@@ -109,6 +115,7 @@ def main(
     transform_docstrings: bool | None,
     infer_type_checking_imports: bool | None,
     ruff_fix: bool | None,
+    ruff_format: bool | None,
     check_only: bool,
     add_editors_note: bool | None,
     config_file: Path | None,
@@ -138,6 +145,7 @@ def main(
         force_regen=force_regen,
         infer_type_checking_imports=infer_type_checking_imports,
         ruff_fix=ruff_fix,
+        ruff_format=ruff_format,
     )
 
     if not config.files:

@@ -167,6 +167,7 @@ class TreeTransformer:
         extra_name_replacements: dict[str, str] | None = None,
         infer_type_checking_imports: bool = True,
         ruff_fix: bool = False,
+        ruff_format: bool = False,
         file_name: str | None = None,
     ) -> None:
         self.exclude = exclude
@@ -179,19 +180,14 @@ class TreeTransformer:
         self._post_transforms: list[Callable[[str, str, cst.Module], str]] = []
         self._file_name = file_name
         if ruff_fix:
-            self._post_transforms.append(self._run_ruff)
+            self._post_transforms.append(self._ruff_fix)
+        if ruff_format:
+            self._post_transforms.append(self._ruff_format)
 
-    def _run_ruff(self, source: str, output: str, tree: cst.Module) -> str:
-        args = [
-            sys.executable,
-            "-m",
-            "ruff",
-            "check",
-            "--no-cache",
-            "--fix",
-            "--fix-only",
-            "--quiet",
-        ]
+    def _run_ruff(
+        self, source: str, output: str, tree: cst.Module, cmd: list[str]
+    ) -> str:
+        args = [sys.executable, "-m", "ruff", *cmd, "--no-cache", "--quiet"]
 
         if self._file_name:
             args.append(f"--stdin-filename={self._file_name}")
@@ -207,6 +203,14 @@ class TreeTransformer:
             if process.returncode != 0:
                 raise ChildProcessError(f"Error calling ruff: {stderr}")
             return stdout
+
+    def _ruff_fix(self, source: str, output: str, tree: cst.Module) -> str:
+        return self._run_ruff(
+            source, output, tree, cmd=["check", "--fix", "--fix-only"]
+        )
+
+    def _ruff_format(self, source: str, output: str, tree: cst.Module) -> str:
+        return self._run_ruff(source, output, tree, cmd=["format"])
 
     def __call__(self, source: str) -> str:
         if not source:
