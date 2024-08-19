@@ -1568,7 +1568,7 @@ def test_ruff_fix_and_format(tmp_path, monkeypatch) -> None:
     expected = """
     import asyncio
     import time
-    
+
     mode = 'format'
     """
 

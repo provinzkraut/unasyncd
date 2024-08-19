@@ -184,7 +184,9 @@ class TreeTransformer:
         if ruff_format:
             self._post_transforms.append(self._ruff_format)
 
-    def _run_ruff(self, source: str, output: str, tree: cst.Module, cmd: list[str]) -> str:
+    def _run_ruff(
+        self, source: str, output: str, tree: cst.Module, cmd: list[str]
+    ) -> str:
         args = [sys.executable, "-m", "ruff", *cmd, "--no-cache", "--quiet"]
 
         if self._file_name:
@@ -203,10 +205,13 @@ class TreeTransformer:
             return stdout
 
     def _ruff_fix(self, source: str, output: str, tree: cst.Module) -> str:
-        return self._run_ruff(source, output, tree, cmd=["check", "--fix", "--fix-only"])
+        return self._run_ruff(
+            source, output, tree, cmd=["check", "--fix", "--fix-only"]
+        )
 
     def _ruff_format(self, source: str, output: str, tree: cst.Module) -> str:
         return self._run_ruff(source, output, tree, cmd=["format"])
+
     def __call__(self, source: str) -> str:
         if not source:
             return ""
