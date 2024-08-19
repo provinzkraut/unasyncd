@@ -375,6 +375,7 @@ pathlib.Path().read_bytes()
 | `typing.AsyncIterable[int]`       | `typing.Iterable[int]`             |
 | `typing.AsyncIterator[int]`       | `typing.Iterator[int]`             |
 | `typing.AsyncGenerator[int, str]` | `typing.Generator[int, str, None]` |
+| `typing.Awaitable[str]`           | `str`                              |
 
 
 ### Docstrings

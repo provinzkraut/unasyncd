@@ -1072,20 +1072,29 @@ def test_unused_name_not_replaced() -> None:
     assert transformer(dedent(source)) == dedent(expected)
 
 
-@pytest.mark.xfail
 def test_unwrap_awaitable_annotation(transformer: TreeTransformer) -> None:
     source = """
-    from typing import Awaitable
+    from typing import Awaitable, Callable
 
     async def foo() -> Awaitable[None]:
         pass
+
+    async def bar(fn: Callable[[], Awaitable[int]]) -> None:
+        pass
+
+    aw: Awaitable[list[dict[str, int]]]
     """
 
     expected = """
-    from typing import Awaitable
+    from typing import Awaitable, Callable
 
     def foo() -> None:
         pass
+
+    def bar(fn: Callable[[], int]) -> None:
+        pass
+
+    aw: list[dict[str, int]]
     """
 
     assert transformer(dedent(source)) == dedent(expected)

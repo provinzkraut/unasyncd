@@ -794,14 +794,29 @@ class _AsyncTransformer(_ReplaceNamesMixin, cst.CSTTransformer):
 
     def leave_Subscript(
         self, original_node: cst.Subscript, updated_node: cst.Subscript
-    ) -> cst.Subscript:
+    ) -> cst.BaseExpression:
         """Fix ``typing.Generator`` generic form by adding a third ``None`` as a last
         subscript element: ``typing.AsyncGenerator[None, None]`` >
         ``typing.Generator[None, None, None]``.
         """
-        if self.get_qualified_name(original_node) != "typing.AsyncGenerator":
-            return updated_node
+        qualified_name = self.get_qualified_name(original_node)
+        if qualified_name == "typing.AsyncGenerator":
+            return self._fix_async_generator(updated_node)
 
+        if qualified_name == "typing.Awaitable":
+            return self._transform_awaitable(updated_node)
+
+        return updated_node
+
+    def _transform_awaitable(self, updated_node: cst.Subscript) -> cst.BaseExpression:
+        if len(updated_node.slice) > 1:
+            raise ValueError("Too many elements in typing.Awaitable")
+        index = updated_node.slice[0].slice
+        if not isinstance(index, cst.Index):
+            raise ValueError(f"Expected index element. Got {type(index)}")
+        return index.value
+
+    def _fix_async_generator(self, updated_node: cst.Subscript) -> cst.Subscript:
         none_element = cst.SubscriptElement(slice=cst.Index(cst.Name("None")))
         updated_node = updated_node.with_changes(
             slice=[*updated_node.slice, none_element]
