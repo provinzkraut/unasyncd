@@ -42,6 +42,13 @@ NAME_REPLACEMENTS = {
     "asyncio.sleep": "time.sleep",
     "anyio.sleep": "time.sleep",
     "anyio.Path": "pathlib.Path",
+    "asyncio.Semaphore": "threading.Semaphore",
+    "anyio.Semaphore": "threading.Semaphore",
+    "asyncio.Lock": "threading.Lock",
+    "anyio.Lock": "threading.Lock",
+    "asyncio.Event": "threading.Event",
+    "anyio.Event": "threading.Event",
+    "asyncio.Barrier": "threading.Barrier",
 }
 
 

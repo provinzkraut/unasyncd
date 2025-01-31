@@ -60,6 +60,9 @@ Unasyncd features:
     * [`asyncio.TaskGroup`](#asynciotaskgroup)
     * [`anyio.create_task_group`](#anyiocreatetaskgroup)
     * [`asyncio.sleep` / `anyio.sleep`](#asynciosleep--anyiosleep)
+    * [`asyncio.Lock` / `anyio.Lock`](#asynciolock--anyiolock)
+    * [`asyncio.Event` / `anyio.Event`](#asyncioevent--anyioevent)
+    * [`asyncio.Barrier`](#asynciobarrier)
     * [`anyio.Path`](#anyiopath)
     * [Type annotations](#type-annotations)
     * [Docstrings](#docstrings)
@@ -351,6 +354,89 @@ import asyncio
 
 await asyncio.sleep(0)
 ```
+
+### `asyncio.Lock` / `anyio.Lock`
+
+*Async*
+```python
+import asyncio
+# import anyio
+
+lock = asyncio.Lock()
+
+async with lock:
+    pass
+```
+
+*Sync*
+```python
+import threading
+
+lock = threading.Lock()
+
+with lock:
+    pass
+```
+
+### `asyncio.Event` / `anyio.Event`
+
+*Async*
+```python
+import asyncio
+# import anyio
+
+event = asyncio.Event()
+
+event.set()
+await event.wait()
+assert event.is_set()
+event.clear()
+```
+
+*Sync*
+```python
+import threading
+
+event = threading.Event()
+
+event.set()
+event.wait()
+assert event.is_set()
+event.clear()
+```
+
+### `asyncio.Barrier`
+
+*Async*
+```python
+import asyncio
+
+barrier = asyncio.Barrier(2)
+
+await barrier.wait()
+await barrier.reset()
+await barrier.abort()
+
+barrier.parties
+barrier.n_waiting
+barrier.broken
+```
+
+*Sync*
+```python
+import threading
+
+barrier = threading.Barrier(2)
+
+barrier.wait()
+barrier.reset()
+barrier.abort()
+
+barrier.parties
+barrier.n_waiting
+barrier.broken
+```
+
 
 ### `anyio.Path`
 
