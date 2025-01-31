@@ -1,35 +1,36 @@
-[tool.poetry]
+[project]
 name = "unasyncd"
-version = "0.8.1"
+version = "0.9.0"
 description = "A tool to transform asynchronous Python code to synchronous Python code."
-authors = ["Janek Nouvertné <j.a.nouvertne@posteo.de>"]
+authors = [{ name = "Janek Nouvertné", email = "provinzkraut@posteo.de" }, ]
 license = "MIT"
 readme = "README.md"
+requires-python = ">=3.9"
 
-[tool.poetry.dependencies]
-python = "^3.8"
-libcst = ">=1.0.0,<2"
-click = "^8.1.7"
-rich = "^13.6.0"
-anyio = "^4.0.0"
-msgspec = "^0.18.4"
-tomli = {version = "^2.0.1", python = "<3.11"}
-tomli-w = "^1.0.0"
-rich-click = "^1.6.1"
-ruff = {version = "*", optional = true}
-importlib-metadata = { version = "^8.0.0", python = "<3.10" }
+dependencies = [
+    "libcst>=1.0.0,<2",
+    "click~=8.1.7",
+    "rich~=13.6.0",
+    "anyio~=4.0.0",
+    "msgspec>=0.19",
+    "tomli~=2.0.1;python_version<'3.11'",
+    "tomli-w~=1.0.0",
+    "rich-click~=1.6.1",
+    "importlib-metadata~=8.0.0;python_version<'3.10'",
+]
 
 
-[tool.poetry.extras]
+[project.optional-dependencies]
 ruff = ["ruff"]
 
 
-[tool.poetry.group.dev.dependencies]
-pytest = "^7.3.1"
-pre-commit = "^3.3.2"
-pytest-mock = "^3.10.0"
-ruff = "*"
-
+[tool.uv]
+dev-dependencies = [
+    "pytest",
+    "pre-commit~=3.3.2",
+    "pytest-mock~=3.10.0",
+    "ruff"
+]
 
 [tool.poetry.scripts]
 unasyncd = "unasyncd.cli:main"
@@ -37,20 +38,20 @@ unasyncd = "unasyncd.cli:main"
 
 [tool.ruff]
 lint.select = [
-    "E",  # pycodestyle
-    "F",  # pyflakes
+    "E", # pycodestyle
+    "F", # pyflakes
     "ERA", # eradicate
-    "I",   # isort
+    "I", # isort
     "RUF", # Ruff-specific rules
     "TCH", # flake8-type-checking
-    "UP",  # pyupgrade
+    "UP", # pyupgrade
 ]
-target-version = "py38"
+target-version = "py39"
 
 [tool.mypy]
 strict = true
 
 
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
