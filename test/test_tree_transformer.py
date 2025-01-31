@@ -730,6 +730,25 @@ def test_asyncio_task_group(transformer: TreeTransformer) -> None:
     assert transformer(dedent(source)) == dedent(expected)
 
 
+def test_asyncio_task_group_with_args(transformer: TreeTransformer) -> None:
+    source = """
+    from asyncio import TaskGroup
+
+    async with TaskGroup() as some_name:
+        some_name.create_task(some_func(1, foo=bar))
+    """
+
+    expected = """
+    from asyncio import TaskGroup
+    from concurrent.futures import ThreadPoolExecutor
+
+    with ThreadPoolExecutor() as some_name:
+        some_name.submit(some_func, 1, foo=bar)
+    """
+
+    assert transformer(dedent(source)) == dedent(expected)
+
+
 def test_asyncio_task_alter_name(transformer: TreeTransformer) -> None:
     source = """
     from asyncio import TaskGroup
@@ -877,6 +896,25 @@ def test_anyio_task_group(transformer: TreeTransformer) -> None:
         def nested_function():
             call()
             async_call()
+    """
+
+    assert transformer(dedent(source)) == dedent(expected)
+
+
+def test_anyio_task_group_with_args(transformer: TreeTransformer) -> None:
+    source = """
+    from anyio import create_task_group
+
+    async with create_task_group() as task_group:
+        task_group.start_soon(some_func, 1, 2)
+    """
+
+    expected = """
+    from anyio import create_task_group
+    from concurrent.futures import ThreadPoolExecutor
+
+    with ThreadPoolExecutor() as executor:
+        executor.submit(some_func, 1, 2)
     """
 
     assert transformer(dedent(source)) == dedent(expected)
@@ -1818,6 +1856,22 @@ def test_anyio_path_module_import(transformer):
     import pathlib
 
     foo = pathlib.Path().read_text()
+    """
+
+    assert transformer(dedent(source)) == dedent(expected)
+
+
+@pytest.mark.xfail(reason="not implemented")
+def test_transform_imports_in_function(transformer):
+    source = """
+    def foo():
+        from contextlib import asynccontextmanager
+    """
+
+    expected = """
+    def foo():
+        from contextlib import asynccontextmanager
+        from contextlib import contextmanager
     """
 
     assert transformer(dedent(source)) == dedent(expected)
