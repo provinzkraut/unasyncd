@@ -1880,12 +1880,12 @@ def test_transform_imports_in_function(transformer):
 def test_asyncio_semaphore(transformer):
     source = """
     import asyncio
-    
+
     sem = asyncio.Semaphore(2)
-    
+
     await sem.acquire()
     await sem.release()
-    
+
     async with sem:
         pass
     """
@@ -1893,12 +1893,12 @@ def test_asyncio_semaphore(transformer):
     expected = """
     import asyncio
     import threading
-    
+
     sem = threading.Semaphore(2)
-    
+
     sem.acquire()
     sem.release()
-    
+
     with sem:
         pass
     """
@@ -1911,7 +1911,7 @@ def test_anyio_semaphore(transformer):
     import anyio
 
     sem = anyio.Semaphore(2)
-    
+
     await sem.acquire()
     await sem.release()
 
@@ -1924,7 +1924,7 @@ def test_anyio_semaphore(transformer):
     import threading
 
     sem = threading.Semaphore(2)
-    
+
     sem.acquire()
     sem.release()
 
@@ -1938,9 +1938,9 @@ def test_anyio_semaphore(transformer):
 def test_asyncio_lock(transformer):
     source = """
     import asyncio
-    
+
     lock = asyncio.Lock()
-    
+
     async with lock:
         pass
     """
@@ -1948,9 +1948,9 @@ def test_asyncio_lock(transformer):
     expected = """
     import asyncio
     import threading
-    
+
     lock = threading.Lock()
-    
+
     with lock:
         pass
     """
@@ -1984,9 +1984,9 @@ def test_anyio_lock(transformer):
 def test_asyncio_event(transformer):
     source = """
     import asyncio
-    
+
     event = asyncio.Event()
-    
+
     event.set()
     await event.wait()
     assert event.is_set()
@@ -1996,9 +1996,9 @@ def test_asyncio_event(transformer):
     expected = """
     import asyncio
     import threading
-    
+
     event = threading.Event()
-    
+
     event.set()
     event.wait()
     assert event.is_set()
@@ -2036,13 +2036,13 @@ def test_anyio_event(transformer):
 def test_asyncio_barrier(transformer):
     source = """
     import asyncio
-    
+
     barrier = asyncio.Barrier(2)
-    
+
     await barrier.wait()
     await barrier.reset()
     await barrier.abort()
-    
+
     barrier.parties
     barrier.n_waiting
     barrier.broken
@@ -2051,13 +2051,13 @@ def test_asyncio_barrier(transformer):
     expected = """
     import asyncio
     import threading
-    
+
     barrier = threading.Barrier(2)
-    
+
     barrier.wait()
     barrier.reset()
     barrier.abort()
-    
+
     barrier.parties
     barrier.n_waiting
     barrier.broken
