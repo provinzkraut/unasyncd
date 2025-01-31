@@ -409,10 +409,9 @@ class _TaskGroupBodyTransformer(
         if not m.matches(first_arg, m.Arg(value=m.Call(m.DoNotCare()))):
             return updated_node
 
-        new_arg = first_arg.with_changes(
-            value=cst.ensure_type(first_arg.value, cst.Call).func
-        )
-        return updated_node.with_changes(args=[new_arg, *updated_node.args[1:]])
+        call = cst.ensure_type(first_arg.value, cst.Call)
+        new_arg = first_arg.with_changes(value=call.func)
+        return updated_node.with_changes(args=[new_arg, *call.args])
 
 
 class _AsyncTransformer(_ReplaceNamesMixin, cst.CSTTransformer):
