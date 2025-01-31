@@ -22,7 +22,7 @@ async def _run(*, config: Config, check_only: bool, verbose: bool) -> bool:
     files_unchanged = 0
 
     status = console.status("Processing") if not verbose else nullcontext()
-    with status:  # type: ignore[attr-defined]
+    with status:
         async for result in unasync_files(config=config):
             if not result.transformed:
                 files_unchanged += 1
