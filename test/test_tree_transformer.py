@@ -1875,3 +1875,192 @@ def test_transform_imports_in_function(transformer):
     """
 
     assert transformer(dedent(source)) == dedent(expected)
+
+
+def test_asyncio_semaphore(transformer):
+    source = """
+    import asyncio
+
+    sem = asyncio.Semaphore(2)
+
+    await sem.acquire()
+    await sem.release()
+
+    async with sem:
+        pass
+    """
+
+    expected = """
+    import asyncio
+    import threading
+
+    sem = threading.Semaphore(2)
+
+    sem.acquire()
+    sem.release()
+
+    with sem:
+        pass
+    """
+
+    assert transformer(dedent(source)) == dedent(expected)
+
+
+def test_anyio_semaphore(transformer):
+    source = """
+    import anyio
+
+    sem = anyio.Semaphore(2)
+
+    await sem.acquire()
+    await sem.release()
+
+    async with sem:
+        pass
+    """
+
+    expected = """
+    import anyio
+    import threading
+
+    sem = threading.Semaphore(2)
+
+    sem.acquire()
+    sem.release()
+
+    with sem:
+        pass
+    """
+
+    assert transformer(dedent(source)) == dedent(expected)
+
+
+def test_asyncio_lock(transformer):
+    source = """
+    import asyncio
+
+    lock = asyncio.Lock()
+
+    async with lock:
+        pass
+    """
+
+    expected = """
+    import asyncio
+    import threading
+
+    lock = threading.Lock()
+
+    with lock:
+        pass
+    """
+
+    assert transformer(dedent(source)) == dedent(expected)
+
+
+def test_anyio_lock(transformer):
+    source = """
+    import anyio
+
+    lock = anyio.Lock()
+
+    async with lock:
+        pass
+    """
+
+    expected = """
+    import anyio
+    import threading
+
+    lock = threading.Lock()
+
+    with lock:
+        pass
+    """
+
+    assert transformer(dedent(source)) == dedent(expected)
+
+
+def test_asyncio_event(transformer):
+    source = """
+    import asyncio
+
+    event = asyncio.Event()
+
+    event.set()
+    await event.wait()
+    assert event.is_set()
+    event.clear()
+    """
+
+    expected = """
+    import asyncio
+    import threading
+
+    event = threading.Event()
+
+    event.set()
+    event.wait()
+    assert event.is_set()
+    event.clear()
+    """
+
+    assert transformer(dedent(source)) == dedent(expected)
+
+
+def test_anyio_event(transformer):
+    source = """
+    import anyio
+
+    event = anyio.Event()
+
+    event.set()
+    await event.wait()
+    assert event.is_set()
+    """
+
+    expected = """
+    import anyio
+    import threading
+
+    event = threading.Event()
+
+    event.set()
+    event.wait()
+    assert event.is_set()
+    """
+
+    assert transformer(dedent(source)) == dedent(expected)
+
+
+def test_asyncio_barrier(transformer):
+    source = """
+    import asyncio
+
+    barrier = asyncio.Barrier(2)
+
+    await barrier.wait()
+    await barrier.reset()
+    await barrier.abort()
+
+    barrier.parties
+    barrier.n_waiting
+    barrier.broken
+    """
+
+    expected = """
+    import asyncio
+    import threading
+
+    barrier = threading.Barrier(2)
+
+    barrier.wait()
+    barrier.reset()
+    barrier.abort()
+
+    barrier.parties
+    barrier.n_waiting
+    barrier.broken
+    """
+
+    assert transformer(dedent(source)) == dedent(expected)
