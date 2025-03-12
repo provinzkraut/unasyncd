@@ -32,7 +32,7 @@ dev-dependencies = [
     "ruff"
 ]
 
-[tool.poetry.scripts]
+[project.scripts]
 unasyncd = "unasyncd.cli:main"
 
 
