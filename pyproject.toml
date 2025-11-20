@@ -24,8 +24,8 @@ dependencies = [
 ruff = ["ruff"]
 
 
-[tool.uv]
-dev-dependencies = [
+[dependency-groups]
+dev = [
     "pytest",
     "pre-commit~=3.3.2",
     "pytest-mock~=3.10.0",
