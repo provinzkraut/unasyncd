@@ -875,7 +875,7 @@ class _AsyncTransformer(_ReplaceNamesMixin, cst.CSTTransformer):
             if not isinstance(element.value, cst.SimpleString):
                 continue
 
-            value = cast(str, element.value.evaluated_value)
+            value = cast("str", element.value.evaluated_value)
             if not (qualified_name := imported_names.get(value)):
                 continue
 

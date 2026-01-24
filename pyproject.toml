@@ -1,22 +1,22 @@
 [project]
 name = "unasyncd"
-version = "0.9.0"
+version = "0.10.0"
 description = "A tool to transform asynchronous Python code to synchronous Python code."
 authors = [{ name = "Janek Nouvertné", email = "provinzkraut@posteo.de" }, ]
 license = "MIT"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 
 dependencies = [
     "libcst>=1.0.0,<2",
-    "click~=8.1.7",
+    "click>=8.1.7",
     "rich~=13.6.0",
-    "anyio~=4.0.0",
+    "anyio>=4.0.0",
     "msgspec>=0.19",
-    "tomli~=2.0.1;python_version<'3.11'",
-    "tomli-w~=1.0.0",
-    "rich-click~=1.6.1",
-    "importlib-metadata~=8.0.0;python_version<'3.10'",
+    "tomli>=2.0.1;python_version<'3.11'",
+    "tomli-w>=1.0.0",
+    "rich-click>=1.6.1",
+    "importlib-metadata>=8.0.0;python_version<'3.10'",
 ]
 
 
