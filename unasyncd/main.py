@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 import anyio
-import anyio.to_process
+import anyio.to_thread
 import msgspec
 import msgspec.json
 from anyio import Path
