@@ -164,8 +164,8 @@ class File(Path):
     contents.
     """
 
-    def __init__(self, path: str | Path):
-        super().__init__(path)
+    def __init__(self, path: str | Path, *args: Any, **kwargs: Any):
+        super().__init__(path, *args, **kwargs)
         self._content: str | None = None
         self._signature: str | None = None
         self._content_hash: str | None = None

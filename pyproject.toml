@@ -1,6 +1,6 @@
 [project]
 name = "unasyncd"
-version = "0.10.0"
+version = "0.10.1"
 description = "A tool to transform asynchronous Python code to synchronous Python code."
 authors = [{ name = "Janek Nouvertné", email = "provinzkraut@posteo.de" }, ]
 license = "MIT"
