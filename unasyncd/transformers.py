@@ -1145,7 +1145,7 @@ class _ImportTransformer(cst.CSTTransformer):
             current_names = (
                 updated_node.names
                 if not isinstance(updated_node.names, cst.ImportStar)
-                else [updated_node.names]  # type: ignore[list-item]
+                else [updated_node.names]
             )
 
             updated_node = updated_node.with_changes(
